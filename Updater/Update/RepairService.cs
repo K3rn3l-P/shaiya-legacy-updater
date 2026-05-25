@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class RepairService
     {
@@ -92,3 +92,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

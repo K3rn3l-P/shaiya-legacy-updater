@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public partial class Account : UserControl
     {
@@ -46,3 +46,4 @@ namespace Shaiya_Invasion_Updater
         private void GridAccountName_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#7A6754"); TextBlockUserID.Effect = null; MainWindow.MW.LogInId(UserID); }
     }
 }
+

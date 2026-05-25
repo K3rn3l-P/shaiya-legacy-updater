@@ -1,4 +1,4 @@
-namespace Shaiya_Invasion_Updater
+﻿namespace Shaiya_Duff_Updater
 {
     public class LauncherManifest
     {
@@ -38,3 +38,4 @@ namespace Shaiya_Invasion_Updater
         public string text { get; set; }
     }
 }
+

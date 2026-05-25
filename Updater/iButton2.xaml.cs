@@ -1,10 +1,10 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public partial class iButton2 : UserControl
     {
@@ -20,3 +20,4 @@ namespace Shaiya_Invasion_Updater
         private void UserControl_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { TextBlockButtonText.Foreground = B("#7A6754"); TextBlockButtonText.Effect = null; Opacity = 1.0; }
     }
 }
+

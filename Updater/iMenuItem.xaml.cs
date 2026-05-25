@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,7 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public partial class iMenuItem : UserControl
     {
@@ -97,3 +97,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

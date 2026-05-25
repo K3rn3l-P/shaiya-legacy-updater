@@ -1,0 +1,46 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build output
+[Bb]in/
+[Oo]bj/
+x64/
+
+# Logs and runtime artifacts
+*.log
+Updater/logs/
+*.download
+*.tmp_sahcrypt
+*.enc
+*.dec
+*.legacy
+saved_accounts.local.json
+ServerSide/Updater/api/*.log
+
+# Deployment-only server config (sensitive)
+ServerSide/Updater/api/config.php
+ServerSide/Updater/api/config.local.php
+ServerSide/Updater/api/config.dev.php
+ServerSide/Updater/launcher.ini
+
+# Generic secrets
+*.pfx
+*.snk
+*.key
+*.pem
+*.crt
+*.cer
+
+# Server runtime payloads (keep placeholders only)
+ServerSide/Updater/Patches/*
+!ServerSide/Updater/Patches/.gitkeep
+ServerSide/Updater/Files/*
+!ServerSide/Updater/Files/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db

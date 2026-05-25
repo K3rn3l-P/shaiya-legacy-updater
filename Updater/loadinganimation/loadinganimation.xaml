@@ -1,7 +1,7 @@
-<UserControl x:Class="Shaiya_Invasion_Updater.LoadingAnimation.LoadingAnimation"
+﻿<UserControl x:Class="Shaiya_Duff_Updater.LoadingAnimation.LoadingAnimation"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:Shaiya_Invasion_Updater="clr-namespace:Shaiya_Invasion_Updater.LoadingAnimation"
+             xmlns:Shaiya_Duff_Updater="clr-namespace:Shaiya_Duff_Updater.LoadingAnimation"
              Width="88" Height="88">
   <FrameworkElement.Resources>
     <Storyboard x:Key="ProgressAnimation" SpeedRatio="3" RepeatBehavior="Forever">
@@ -393,7 +393,7 @@
   <Canvas x:Name="LayoutRoot" VerticalAlignment="Top" Height="88" Width="88">
     <TextBlock Text="Loading..." Foreground="#7A6754" TextWrapping="Wrap" Canvas.Left="20.069" Canvas.Top="36.214"/>
     <Grid Width="10.734" Height="10.004" Canvas.Left="38.614" Canvas.Top="0.331">
-      <Shaiya_Invasion_Updater:Block x:Name="block" RenderTransformOrigin="0.5,4.3689" OpacityMask="#00000000" VerticalAlignment="Top"
+      <Shaiya_Duff_Updater:Block x:Name="block" RenderTransformOrigin="0.5,4.3689" OpacityMask="#00000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -403,8 +403,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block1" RenderTransformOrigin="0.5,4.3689" OpacityMask="#0C000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block1" RenderTransformOrigin="0.5,4.3689" OpacityMask="#0C000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -414,8 +414,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block2" RenderTransformOrigin="0.5,4.3689" OpacityMask="#19000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block2" RenderTransformOrigin="0.5,4.3689" OpacityMask="#19000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -425,8 +425,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block3" RenderTransformOrigin="0.5,4.3689" OpacityMask="#26000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block3" RenderTransformOrigin="0.5,4.3689" OpacityMask="#26000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -436,8 +436,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block4" RenderTransformOrigin="0.5,4.3689" OpacityMask="#3D000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block4" RenderTransformOrigin="0.5,4.3689" OpacityMask="#3D000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -447,8 +447,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block5" RenderTransformOrigin="0.5,4.3689" OpacityMask="#56000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block5" RenderTransformOrigin="0.5,4.3689" OpacityMask="#56000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -458,8 +458,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block6" RenderTransformOrigin="0.5,4.3689" OpacityMask="#64000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block6" RenderTransformOrigin="0.5,4.3689" OpacityMask="#64000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -469,8 +469,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block7" RenderTransformOrigin="0.5,4.3689" OpacityMask="#72000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block7" RenderTransformOrigin="0.5,4.3689" OpacityMask="#72000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -480,8 +480,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block8" RenderTransformOrigin="0.5,4.3689" OpacityMask="#80000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block8" RenderTransformOrigin="0.5,4.3689" OpacityMask="#80000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -491,10 +491,10 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block9" OpacityMask="#8E000000" RenderTransformOrigin="0.5,4.3689" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block9" OpacityMask="#8E000000" RenderTransformOrigin="0.5,4.3689" VerticalAlignment="Top"
                                      Height="10.004"/>
-      <Shaiya_Invasion_Updater:Block x:Name="block10" RenderTransformOrigin="0.5,4.3689" OpacityMask="#9C000000" VerticalAlignment="Top"
+      <Shaiya_Duff_Updater:Block x:Name="block10" RenderTransformOrigin="0.5,4.3689" OpacityMask="#9C000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -504,8 +504,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block11" RenderTransformOrigin="0.5,4.3689" OpacityMask="#AA000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block11" RenderTransformOrigin="0.5,4.3689" OpacityMask="#AA000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -515,8 +515,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block12" RenderTransformOrigin="0.5,4.3689" OpacityMask="#B8000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block12" RenderTransformOrigin="0.5,4.3689" OpacityMask="#B8000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -526,8 +526,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block13" RenderTransformOrigin="0.5,4.3689" OpacityMask="#C6000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block13" RenderTransformOrigin="0.5,4.3689" OpacityMask="#C6000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -537,8 +537,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block14" RenderTransformOrigin="0.5,4.3689" OpacityMask="#D4000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block14" RenderTransformOrigin="0.5,4.3689" OpacityMask="#D4000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -548,8 +548,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block15" RenderTransformOrigin="0.5,4.3689" OpacityMask="#E2000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block15" RenderTransformOrigin="0.5,4.3689" OpacityMask="#E2000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -559,8 +559,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block16" RenderTransformOrigin="0.5,4.3689" OpacityMask="#F0000000" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block16" RenderTransformOrigin="0.5,4.3689" OpacityMask="#F0000000" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -570,8 +570,8 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
-      <Shaiya_Invasion_Updater:Block x:Name="block17" RenderTransformOrigin="0.5,4.3689" OpacityMask="Black" VerticalAlignment="Top"
+      </Shaiya_Duff_Updater:Block>
+      <Shaiya_Duff_Updater:Block x:Name="block17" RenderTransformOrigin="0.5,4.3689" OpacityMask="Black" VerticalAlignment="Top"
                                      Height="10.004">
         <UIElement.RenderTransform>
           <TransformGroup>
@@ -581,7 +581,7 @@
             <TranslateTransform/>
           </TransformGroup>
         </UIElement.RenderTransform>
-      </Shaiya_Invasion_Updater:Block>
+      </Shaiya_Duff_Updater:Block>
     </Grid>
   </Canvas>
 </UserControl>

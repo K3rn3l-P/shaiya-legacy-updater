@@ -1,0 +1,8 @@
+# Tooling endpoints are local-only by default.
+# Used for manifest hash generation during server maintenance.
+
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+    Require local
+</IfModule>

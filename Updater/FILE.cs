@@ -1,4 +1,4 @@
-namespace Shaiya_Invasion_Updater
+﻿namespace Shaiya_Duff_Updater
 {
   public class FILE
   {
@@ -9,3 +9,4 @@ namespace Shaiya_Invasion_Updater
     public FOLDER Parent;
   }
 }
+

@@ -1,8 +1,8 @@
-using Ionic.Zip;
+﻿using Ionic.Zip;
 using System;
 using System.IO;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class PatchExtractor
     {
@@ -34,3 +34,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

@@ -1,4 +1,4 @@
-namespace Shaiya_Invasion_Updater
+﻿namespace Shaiya_Duff_Updater
 {
     public static class GameOffsets
     {
@@ -74,3 +74,4 @@ namespace Shaiya_Invasion_Updater
         public const int TempPasswordBufferLength = 32;
     }
 }
+

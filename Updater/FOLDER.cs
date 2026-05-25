@@ -1,6 +1,6 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
   public class FOLDER
   {
@@ -30,3 +30,4 @@ namespace Shaiya_Invasion_Updater
     }
   }
 }
+

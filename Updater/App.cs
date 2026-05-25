@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.CodeDom.Compiler;
 using System.Diagnostics;
 using System.Windows;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
   public class App : Application
   {
@@ -22,3 +22,4 @@ namespace Shaiya_Invasion_Updater
     }
   }
 }
+

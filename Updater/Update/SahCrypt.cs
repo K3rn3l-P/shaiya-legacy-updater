@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public enum SahCryptState
     {
@@ -496,3 +496,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

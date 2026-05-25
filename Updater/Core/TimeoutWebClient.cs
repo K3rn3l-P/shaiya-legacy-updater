@@ -1,7 +1,7 @@
-using System;
+﻿using System;
 using System.Net;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public sealed class TimeoutWebClient : WebClient
     {
@@ -26,3 +26,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

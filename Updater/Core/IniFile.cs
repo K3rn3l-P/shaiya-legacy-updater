@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public sealed class IniFile
     {
@@ -92,3 +92,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public sealed class GameWindowController : IDisposable
     {
@@ -148,3 +148,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

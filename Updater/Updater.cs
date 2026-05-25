@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +7,7 @@ using System.Net;
 using System.Threading;
 using System.Windows;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class Updater
     {
@@ -348,3 +348,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Security.Cryptography;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class HashUtil
     {
@@ -16,3 +16,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

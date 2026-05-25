@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
   public class SAH
   {
@@ -335,3 +335,4 @@ namespace Shaiya_Invasion_Updater
     private byte ROR(byte value, byte count) => (byte) ((int) value >> (int) count | (int) value << 8 - (int) count);
   }
 }
+

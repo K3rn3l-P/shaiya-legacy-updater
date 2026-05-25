@@ -1,52 +1,48 @@
 # Legacy Shaiya Updater with Modern Core
 
-This repository contains a legacy-style Shaiya launcher UI with a modernized login, update, patch, repair, and SAH/ESAH handling core.
+This repository provides a legacy-style Shaiya launcher UI with a modernized runtime core for login, patch/update, repair, and SAH/ESAH handling.
 
-The UI keeps the classic launcher look, while runtime behavior is driven by server-side configuration instead of local `updater.ini` files.
+The UI keeps the classic launcher look, while behavior is driven by server-side configuration (`launcher.ini`) instead of local updater INI files.
 
 ## Main features
 
-- Legacy WPF launcher UI targeting **.NET Framework 4.8** and **x86**.
+- Legacy WPF launcher UI targeting **.NET Framework 4.8** (`x86`).
 - Plain PS_UserData login through PHP + Microsoft SQL Server.
-- Saved-account support using a device hash and `UserUID`, without storing the real password in a separate updater table.
-- Server-side configuration through `ServerSide/Updater/launcher.ini` or `launcher.php`.
-- Patch manifest support through `manifest.json`.
-- Patch download to a temporary `.download` file before validation.
-- SHA-256 and file-size validation before applying patches.
-- ZIP path traversal protection.
-- Transactional patch backup and rollback.
-- ESAH support for `data.sah` and `update.sah` during patching.
-- Repair/verify support through the `manifest.json` `files` list.
-- Launcher-integrated game loading panel; no separate topmost mini-loading window is created.
-- Optional offscreen hiding of `game.exe` until character selection is expected to be ready.
+- Saved-account support using a device hash + `UserUID` (no plain password table in updater DB).
+- Server-side runtime config via `ServerSide/Updater/launcher.ini` exposed by `launcher.php`.
+- Patch flow with temporary `.download` file, checksum/size validation, transactional backup, rollback.
+- ZIP traversal protection in patch extraction.
+- Repair/verify mode based on `manifest.json` `files` entries.
+- SAH/ESAH-aware update path (`data.sah` / `update.sah`).
+- Integrated launch loading panel (no separate mini-loader window).
+- Optional offscreen hide/restore of `game.exe` until ready.
+- PT0182 server-selection automation with one-shot hook and resilient fallback/recovery behavior.
 
-## Important public-release notes
+## Public-release notes
 
-This package was cleaned for GitHub-style source sharing:
+This repository was cleaned for public source sharing:
 
-- User-facing text and documentation were converted to English.
-- Real deployment secrets are not required in source.
 - `ServerSide/Updater/api/config.sample.php` is the public SQL config template.
-- `ServerSide/Updater/api/config.php` is ignored by Git and should contain real server credentials only on the deployment machine.
-- `ServerSide/Updater/launcher.sample.ini` is the public launcher config template.
-- `ServerSide/Updater/launcher.ini` is ignored by Git and should contain real production keys only on the deployment machine.
-- The SAH/ESAH key included in sample files and `SahCryptTool` is a public sample key only. Replace it before production use.
-- The bundled UI image assets and third-party binaries should be reviewed before publishing a public repository.
+- `ServerSide/Updater/api/config.php` is deployment-only (ignored by Git).
+- `ServerSide/Updater/launcher.sample.ini` is documentation/example only.
+- `ServerSide/Updater/launcher.ini` is deployment runtime config (ignored by Git in production setups).
+- `ServerSide/Updater/launcher.php` serves **only** `launcher.ini`.
+- SAH/ESAH keys in sample files/tools are public placeholders. Replace for production.
 
 ## Project layout
 
 ```txt
 Updater.LegacyUI.ModernCore.sln   Main Visual Studio solution
 Updater/                          WPF launcher source
-Updater/Game/                     Game.exe offsets, window control, and server-select automation
-Updater/Update/                   Patch, repair, manifest, transaction, and SAH/ESAH logic
-Updater/Auth/                     Login API client and local saved-account helpers
-Updater/Core/                     Config, paths, INI, logging, and web timeout helpers
+Updater/Game/                     Offsets, process/window control, auto server-select
+Updater/Update/                   Patch, repair, manifest, transaction, SAH/ESAH
+Updater/Auth/                     Login API client and saved-account helpers
+Updater/Core/                     Config, paths, INI, logging, timeout web client
 ServerSide/Updater/               PHP API, launcher config, manifest, tools, patch folders
 ServerSide_SQL/                   SQL scripts for saved-account support
-SahCryptTool/                     C++ ESAH helper tool
+SahCryptTool/                     C++ ESAH helper
 
-docs/                             Install, login, cleanup, and release notes
+docs/                             Install/login/cleanup/release notes
 ```
 
 ## Build requirements
@@ -54,21 +50,21 @@ docs/                             Install, login, cleanup, and release notes
 - Windows
 - Visual Studio 2022
 - .NET Framework 4.8 Developer Pack
-- x86 build target
+- `x86` build target
 
-Build only the updater:
+Build updater only:
 
 ```bat
 build_updater_only.bat
 ```
 
-Build the full solution:
+Build full solution:
 
 ```bat
 build.bat
 ```
 
-You can also open:
+Or open:
 
 ```txt
 Updater.LegacyUI.ModernCore.sln
@@ -85,17 +81,24 @@ C:\inetpub\wwwroot\Updater
 Basic steps:
 
 1. Copy `ServerSide/Updater/*` to `C:\inetpub\wwwroot\Updater`.
-2. Copy `ServerSide/Updater/api/config.sample.php` to `ServerSide/Updater/api/config.php` on the server.
+2. Copy `ServerSide/Updater/api/config.sample.php` to `ServerSide/Updater/api/config.php` on server.
 3. Edit `config.php` with real SQL Server credentials.
-4. Copy `ServerSide/Updater/launcher.sample.ini` to `ServerSide/Updater/launcher.ini` on the server.
-5. Edit `launcher.ini` with real URLs and the production SAH/ESAH key.
-6. Run the SQL script if saved-account login is needed:
+4. Copy `ServerSide/Updater/launcher.sample.ini` to `ServerSide/Updater/launcher.ini`.
+5. Edit `launcher.ini` with real URLs + production SAH/ESAH key.
+6. Run SQL script if saved-account login is needed:
 
 ```txt
 ServerSide_SQL/01_updater_auth_tables.sql
 ```
 
-Test the server:
+Security notes:
+
+- `ServerSide/Updater/.htaccess` is production-hardened.
+- Local-only endpoints are enforced both by `.htaccess` and by `ServerSide/Updater/local_only.php` (application-level guard).
+- Diagnostics (`test-*.php`) and tooling (`tools/*`) are localhost-only by default.
+- Runtime payload URLs (`Patches/*`, `Files/*`) remain public for launcher clients.
+
+Test endpoints (from localhost/server):
 
 ```txt
 http://127.0.0.1/Updater/test-env.php
@@ -115,41 +118,41 @@ Expected DB test shape:
 
 ## Patch deployment
 
-Put patch files here:
+Put patch files in:
 
 ```txt
 C:\inetpub\wwwroot\Updater\Patches
 ```
 
-Then generate manifest entries:
+Generate patch manifest entries:
 
 ```txt
 http://127.0.0.1/Updater/tools/patch_hashes.php
 ```
 
-Copy the generated `patches` array into `manifest.json`.
+Copy generated `patches` array into `manifest.json`.
 
-Patch files are expected to be ZIP files with a `.patch` extension. For data patches, include `update.sah` and `update.saf` inside the ZIP.
+Patch files are ZIP payloads with `.patch` extension. Data patches should include `update.sah` + `update.saf`.
 
-## Repair/verify deployment
+## Repair deployment
 
-Put full repair files here:
+Put full repair files in:
 
 ```txt
 C:\inetpub\wwwroot\Updater\Files
 ```
 
-Then generate manifest entries:
+Generate repair manifest entries:
 
 ```txt
 http://127.0.0.1/Updater/tools/file_hashes.php
 ```
 
-Copy the generated `files` array into `manifest.json`.
+Copy generated `files` array into `manifest.json`.
 
-## Active game offset set
+## Active game offsets (PT0182)
 
-The current active offset set targets `game-pt-ps0182.exe`:
+Current active set (`game-pt-ps0182.exe`):
 
 ```txt
 LoginPointer    = 0x007C48FC
@@ -158,11 +161,16 @@ PatchLoginFlow2 = 0x004D1F5F
 PatchLoginFlow3 = 0x004D0DCD
 ```
 
-EP5 fallback offsets remain commented in `Updater/Game/GameOffsets.cs` for rollback or comparison.
+EP5 fallback offsets remain commented in `Updater/Game/GameOffsets.cs`.
 
-## PT0182 automatic server selection
+## PT0182 automatic server selection (current behavior)
 
-After login ID/password injection and login-flow patches, the updater scans process memory for the `CSelectServer` object. Once the server list is initialized, it writes the selected server index and uses a one-shot UI-thread hook to execute the original server-selection block once.
+After credential injection, launcher attempts direct server selection by:
+
+1. Waiting until PT0182 server-list state is initialized.
+2. Finding `CSelectServer` object in process memory.
+3. Writing selected index fields.
+4. Installing one-shot hook to execute original select block once.
 
 Active values:
 
@@ -177,38 +185,65 @@ One-shot branch            = 0x0050CC01
 Original select block      = 0x0050CCCE
 ```
 
-Server-side toggle:
+### Resilience/recovery logic
+
+- If server-list pointer remains `0`, launcher can early-exit attempts (`AutoSelectServerObjectMissingAssumeSkipAttempts`).
+- On this condition, launcher can perform one recovery cycle (reinjection + second auto-select attempt).
+- If still not ready, launcher falls back to manual server selection.
+
+## Skip server selection mode (`CONFIG.INI`)
+
+Local client file can force skip mode:
 
 ```ini
-[Game]
+[ADVANCED]
+SKIPSERVERSELECTION=1
+```
+
+In this mode launcher:
+
+- skips memory-based auto-select hook,
+- waits for TCP readiness (`30800 -> 30810`) with skip timeout,
+- if timeout occurs, performs one recovery cycle,
+- if still not ready, reveals manual login state cleanly.
+
+## Launcher-integrated loading flow
+
+When game starts, launcher keeps showing an internal loading panel while `game.exe` runs login/server state.
+
+By default game window is moved offscreen and restored when flow is considered ready.
+
+## Runtime configuration keys (`[Game]`)
+
+```ini
+Executable=game.exe
+Arguments=start game
+RequireOriginalClientFiles=false
+BlockPatchWhenGameRunning=true
+
 AutoSelectServer=true
-AutoSelectServerDelayMs=5000
+AutoSelectServerDelayMs=2500
 AutoSelectServerIndex=0
 AutoSelectServerRetries=30
 AutoSelectServerRetryDelayMs=500
-```
+AutoSelectServerObjectMissingAssumeSkipAttempts=6
+AutoSelectRetryWhenServerListMissing=true
+AutoSelectRetryDelayMs=1200
 
-Disable it without rebuilding:
+LoginTcpPort=30800
+GameTcpPort=30810
+TcpPortTransitionDelayMs=2000
+TcpPortTransitionTimeoutMs=30000
+SkipServerSelectionTcpTimeoutMs=12000
 
-```ini
-AutoSelectServer=false
-```
-
-## Launcher-integrated character selection loading
-
-When the game starts, the launcher does not close immediately and does not open a separate loading window. Instead, the launcher shows a large internal loading panel while `game.exe` runs the normal login and server-selection state machine in the background.
-
-By default, the real game window is moved offscreen until character selection is expected to be ready. Then it is restored and brought forward.
-
-Relevant server config:
-
-```ini
-[Game]
 HideLoginScreens=true
 LoginOverlayText=Connecting to the server...
 LoginOverlaySubText=Preparing character selection. Please wait.
 LoginOverlayRevealDelayMs=6000
 LoginOverlayFallbackRevealDelayMs=1000
+SkipServerSelectionRevealDelayMs=2000
+LoginFlowPatchRestoreDelayMs=2000
+
 HideGameWindowUntilReady=true
 GameWindowHideMode=Offscreen
 GameWindowHideWaitMs=8000
@@ -216,14 +251,77 @@ GameWindowOffscreenX=-32000
 GameWindowOffscreenY=-32000
 ```
 
-Notes:
+```ini
+[SahCrypt]
+Enabled=true
+UnlockPatchSah=true
+ProtectDataSahAfterPatch=true
+ProtectDataSahAfterGameExit=true
+; KeyHex / KeyText / KeyBase64 / Key (one format only)
+```
 
-- If the game appears before character selection is ready, increase `LoginOverlayRevealDelayMs` to `8000` or `10000`.
-- `Offscreen` is the recommended mode for older Direct3D clients.
-- For debugging, set `HideGameWindowUntilReady=false` to watch the original client screens.
-- This method does not skip the original login/server-select state machine. It only hides transitional screens from the player.
+## Logging behavior
 
-## More documentation
+- **Debug build**: detailed `DEBUG/INFO/WARN/ERROR` diagnostics are written (including technical details and stack traces when available).
+- **Release build**: logging is intentionally minimal and sanitized for security:
+  - only `ERROR` entries are persisted,
+  - messages are generic (`Operation failed. See support documentation.`),
+  - only exception type is kept (example: `ExceptionType=InvalidOperationException`),
+  - no stack trace / sensitive internals are written.
+
+## SahCrypt key locations (must match)
+
+For ESAH workflows, keep server/runtime and tool keys aligned:
+
+- Server runtime key: `ServerSide/Updater/launcher.ini` -> `[SahCrypt]` (`KeyHex` preferred).
+- Public template: `ServerSide/Updater/launcher.sample.ini` -> `[SahCrypt]`.
+- C++ tool key: `SahCryptTool/main.cpp` -> `kFixedKey`.
+
+If keys are different, `SahCryptTool` may encrypt/decrypt correctly for itself but launcher runtime decryption can fail.
+
+## Automatic SahCrypt key generation on build (Visual Studio)
+
+You can regenerate and align SahCrypt keys automatically on each build.
+
+Use this pre-build command in either project (or both):
+
+```cmd
+powershell -ExecutionPolicy Bypass -File "$(SolutionDir)scripts\generate-sahcrypt-key.ps1"
+```
+
+> Important: configure the pre-build script in **only one** project (`Updater` or `SahCryptTool`) for normal solution builds.
+> If both projects execute it in the same build batch, the key is regenerated twice.
+> The second execution overwrites the first key, which can cause confusion when testing/deploying synchronized runtime/tool keys.
+
+### Option A: `Updater` project
+
+1. Right-click project `Updater` -> `Properties`.
+2. Open `Build Events` -> `Pre-build event command line`.
+3. Paste the command above.
+4. Save and build.
+
+### Option B: `SahCryptTool` project
+
+1. Right-click project `SahCryptTool` -> `Properties`.
+2. Open `Build Events` -> `Pre-Build Event` -> `Command Line`.
+3. Paste the command above.
+4. Ensure **Use In Build** is set to **Yes**.
+5. Save and build.
+
+What the script updates:
+
+- `SahCryptTool/main.cpp` (`kFixedKey`)
+- `ServerSide/Updater/launcher.ini` (`[SahCrypt] KeyHex`)
+
+Expected build output lines:
+
+- `SahCrypt key generated and applied.`
+- `Updated: ...SahCryptTool\main.cpp`
+- `Updated: ...ServerSide\Updater\launcher.ini`
+
+This keeps runtime and tool keys aligned without manual edits.
+
+## Additional docs
 
 - `docs/INSTALL.md`
 - `docs/PLAIN_LOGIN.md`

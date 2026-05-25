@@ -1,7 +1,7 @@
-using System;
+﻿using System;
 using System.IO;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class VersionStore
     {
@@ -89,3 +89,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

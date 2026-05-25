@@ -142,7 +142,42 @@ function table_exists($tableName) {
 }
 
 function check_password_safe($userId, $password) {
-    $stmt = db_query("EXEC dbo.CheckPw_Safe @UserID=?, @Pw=?", [$userId, $password]);
+    global $config;
+
+    $sql = "EXEC dbo.CheckPw_Safe @UserID=?, @Pw=?";
+    $queryOptions = [];
+    if (isset($config['db']['query_timeout'])) {
+        $queryOptions['QueryTimeout'] = (int)$config['db']['query_timeout'];
+    }
+
+    $stmt = @sqlsrv_query(db_conn(), $sql, [$userId, $password], $queryOptions);
+    if ($stmt === false) {
+        $missingProc = false;
+        if (function_exists('sqlsrv_errors')) {
+            $errors = sqlsrv_errors(SQLSRV_ERR_ERRORS);
+            if (is_array($errors)) {
+                foreach ($errors as $e) {
+                    if ((int)($e['code'] ?? 0) === 2812) {
+                        $missingProc = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!$missingProc) {
+            respond(['ok' => false, 'message' => 'Database query failed.', 'detail' => db_error_text(), 'sql' => $sql], 500);
+        }
+
+        $stmt = db_query(
+            "SELECT TOP 1 UserUID, UserID, Pw, Status, Leave
+             FROM dbo.Users_Master WITH (NOLOCK)
+             WHERE UserID COLLATE SQL_Latin1_General_CP1_CS_AS = ?
+               AND Pw COLLATE SQL_Latin1_General_CP1_CS_AS = ?",
+            [$userId, $password]
+        );
+    }
+
     $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
     if ($row === false || $row === null) return null;
     return $row;

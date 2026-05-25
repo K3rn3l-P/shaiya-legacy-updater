@@ -1,14 +1,19 @@
 <?php
-// Updater API configuration sample for IIS/PHP + Microsoft SQL Server 2022.
-// Copy this file to config.php on the server and fill in your real SQL settings.
-// Do not commit real credentials to a public repository.
+// Public sample configuration for Updater API.
+// Copy to config.php on deployment server and fill real values.
+
+$readEnv = static function ($name, $default = '') {
+    $value = getenv($name);
+    if ($value === false || $value === null || $value === '') return $default;
+    return $value;
+};
 
 return [
     'db' => [
-        'server' => 'localhost',
+        'server' => '127.0.0.1',
         'database' => 'PS_UserData',
-        'user' => 'CHANGE_ME',
-        'password' => 'CHANGE_ME',
+        'user' => $readEnv('DB_USER', ''),
+        'password' => $readEnv('DB_PASSWORD', ''),
         'trust_server_certificate' => true,
         'encrypt' => false,
         'login_timeout' => 5,

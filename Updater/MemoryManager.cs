@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class MemoryManager
     {
@@ -72,3 +72,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

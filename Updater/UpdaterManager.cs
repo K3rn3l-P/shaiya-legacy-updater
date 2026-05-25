@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class UpdaterManager
     {
@@ -152,3 +152,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

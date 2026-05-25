@@ -1,8 +1,8 @@
-using System.CodeDom.Compiler;
+﻿using System.CodeDom.Compiler;
 using System.Configuration;
 using System.Runtime.CompilerServices;
 
-namespace Shaiya_Invasion_Updater.Properties
+namespace Shaiya_Duff_Updater.Properties
 {
   [GeneratedCode("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "12.0.0.0")]
   [CompilerGenerated]
@@ -13,3 +13,4 @@ namespace Shaiya_Invasion_Updater.Properties
     public static Settings Default => Settings.defaultInstance;
   }
 }
+

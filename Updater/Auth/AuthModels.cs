@@ -1,4 +1,4 @@
-namespace Shaiya_Invasion_Updater
+﻿namespace Shaiya_Duff_Updater
 {
     public class LoginResponse
     {
@@ -22,3 +22,4 @@ namespace Shaiya_Invasion_Updater
         public string message { get; set; }
     }
 }
+

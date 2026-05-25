@@ -1,14 +1,16 @@
-using Microsoft.VisualBasic.Devices;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Management;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
 using System.Windows.Threading;
+using Microsoft.VisualBasic;
+using Microsoft.VisualBasic.Devices;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
   public static class Utilities
   {
@@ -16,6 +18,9 @@ namespace Shaiya_Invasion_Updater
 
     public static class Hardware
     {
+      private static readonly object HwidSync = new object();
+      private static readonly string HwidPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Shaiya_Duff_Updater", "device.id");
+
       public static string HWID = "";
       public static string CPU_ID = "";
       public static string CPU_NAME = "";
@@ -32,7 +37,32 @@ namespace Shaiya_Invasion_Updater
         Utilities.Hardware.RAM();
         Utilities.Hardware.GPU();
         byte[] bytes = Encoding.ASCII.GetBytes(Utilities.Hardware.CPU_ID + "\t" + Utilities.Hardware.CPU_NAME + "\r\n" + Utilities.Hardware.MOBO_ID + "\t" + Utilities.Hardware.MOBO_NAME + "\r\n" + (object) Utilities.Hardware.RAM_SIZE + "\r\n" + Utilities.Hardware.GPU_NAME + "\t" + (object) Utilities.Hardware.GPU_RAM);
-        Utilities.Hardware.HWID = BitConverter.ToString(new MD5CryptoServiceProvider().ComputeHash(bytes, 0, bytes.Length)).Replace("-", "");
+        string legacyHwid = BitConverter.ToString(new MD5CryptoServiceProvider().ComputeHash(bytes, 0, bytes.Length)).Replace("-", "");
+        Utilities.Hardware.HWID = LoadOrCreateStableHwid(legacyHwid);
+      }
+
+      private static string LoadOrCreateStableHwid(string fallback)
+      {
+        try
+        {
+          lock (HwidSync)
+          {
+            if (File.Exists(HwidPath))
+            {
+              string stored = File.ReadAllText(HwidPath).Trim();
+              if (!string.IsNullOrWhiteSpace(stored)) return stored;
+            }
+
+            string hwid = !string.IsNullOrWhiteSpace(fallback) ? fallback : Guid.NewGuid().ToString("N").ToUpperInvariant();
+            Directory.CreateDirectory(Path.GetDirectoryName(HwidPath) ?? string.Empty);
+            File.WriteAllText(HwidPath, hwid);
+            return hwid;
+          }
+        }
+        catch
+        {
+          return !string.IsNullOrWhiteSpace(fallback) ? fallback : Guid.NewGuid().ToString("N").ToUpperInvariant();
+        }
       }
 
       private static void CPU()
@@ -122,3 +152,7 @@ namespace Shaiya_Invasion_Updater
     }
   }
 }
+
+
+
+

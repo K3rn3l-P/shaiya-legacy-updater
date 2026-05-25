@@ -1,6 +1,6 @@
-using System;
+﻿using System;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class ExceptionManager
     {
@@ -10,3 +10,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

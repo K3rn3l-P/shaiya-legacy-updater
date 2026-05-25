@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public partial class SplashScreen : Window
     {
@@ -117,3 +117,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

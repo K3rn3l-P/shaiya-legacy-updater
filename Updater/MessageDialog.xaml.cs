@@ -1,7 +1,7 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Input;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public partial class MessageDialog : Window
     {
@@ -55,3 +55,4 @@ namespace Shaiya_Invasion_Updater
         private void ButtonNo_Click(object sender, MouseButtonEventArgs e) { ReturnString = "No"; Close(); }
     }
 }
+

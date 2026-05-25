@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Diagnostics;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class AppPaths
     {
@@ -26,3 +26,4 @@ namespace Shaiya_Invasion_Updater
         public static string InBase(string relative) { return Path.Combine(BaseDirectory, relative); }
     }
 }
+

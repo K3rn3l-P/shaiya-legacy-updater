@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
 using System.Text;
 using System.Web.Script.Serialization;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class JsonHttpClient
     {
@@ -54,3 +54,4 @@ namespace Shaiya_Invasion_Updater
         public static T FromJson<T>(string value) { return Serializer.Deserialize<T>(value); }
     }
 }
+

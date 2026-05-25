@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public static class GameServerSelectAutomation
     {
@@ -37,10 +37,17 @@ namespace Shaiya_Invasion_Updater
         [DllImport("kernel32.dll", EntryPoint = "WriteProcessMemory", SetLastError = true)]
         private static extern bool NativeWriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, int nSize, out IntPtr lpNumberOfBytesWritten);
 
+        public static string LastDecisionReason { get; private set; } = "not-run";
+        public static int LastDecisionAttemptCount { get; private set; }
+
         public static bool AutoSelectFirstServer(int processId)
         {
+            LastDecisionReason = "started";
+            LastDecisionAttemptCount = 0;
+
             if (!AppConfig.AutoSelectServer)
             {
+                LastDecisionReason = "disabled-by-config";
                 AppLogger.Info("Auto server select disabled by launcher.ini.");
                 return false;
             }
@@ -52,22 +59,51 @@ namespace Shaiya_Invasion_Updater
                 Thread.Sleep(delay);
             }
 
+            string lastReason = "no-attempt";
+            ServerListState lastState = new ServerListState();
+            int repeatedServerListPointerZero = 0;
+
             for (int i = 0; i < AppConfig.AutoSelectServerRetries; i++)
             {
+                LastDecisionAttemptCount = i + 1;
                 try
                 {
                     ServerListState serverState;
-                    if (!TryGetServerListState(processId, AppConfig.AutoSelectServerIndex, out serverState))
+                    string stateReason;
+                    if (!TryGetServerListState(processId, AppConfig.AutoSelectServerIndex, out serverState, out stateReason))
                     {
+                        lastReason = stateReason;
                         AppLogger.Info("Auto server direct-select wait: server list not ready yet. Attempt=" + (i + 1));
+                        AppLogger.Debug("launch", "Auto-select attempt=" + (i + 1) + " reason=" + stateReason);
+
+                        if (stateReason.StartsWith("server list pointer is 0", StringComparison.OrdinalIgnoreCase))
+                        {
+                            repeatedServerListPointerZero++;
+                            if (repeatedServerListPointerZero >= AppConfig.AutoSelectServerObjectMissingAssumeSkipAttempts)
+                            {
+                                lastReason = stateReason + " (early-exit after " + repeatedServerListPointerZero + " repeats)";
+                                AppLogger.Warn("Auto server direct-select early-exit: server list pointer remained 0 for " + repeatedServerListPointerZero + " attempts.");
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            repeatedServerListPointerZero = 0;
+                        }
+
                         Thread.Sleep(AppConfig.AutoSelectServerRetryDelayMs);
                         continue;
                     }
 
+                    repeatedServerListPointerZero = 0;
+                    lastState = serverState;
                     int obj = FindSelectServerObject(processId);
                     if (obj == 0)
                     {
+                        lastReason = "CSelectServer object not found after ready server state";
                         AppLogger.Info("Auto server direct-select wait: CSelectServer object not found yet. Attempt=" + (i + 1));
+                        AppLogger.Debug("launch", "Auto-select attempt=" + (i + 1) + " stateReady gameState=0x" + serverState.GameStatePointer.ToString("X8") +
+                            " list=0x" + serverState.ListPointer.ToString("X8") + " count=" + serverState.Count + " obj=0");
                         Thread.Sleep(AppConfig.AutoSelectServerRetryDelayMs);
                         continue;
                     }
@@ -80,17 +116,26 @@ namespace Shaiya_Invasion_Updater
                     SetSelectedIndexFields(processId, obj, AppConfig.AutoSelectServerIndex);
                     InstallOneShotSelectHook(processId);
                     AppLogger.Info("Auto server direct-select hook installed. UI thread will call CSelectServer::OnSelect once.");
+                    LastDecisionReason = "success";
                     return true;
                 }
                 catch (Exception ex)
                 {
+                    lastReason = "Exception: " + ex.Message;
                     AppLogger.Warn("Auto server direct-select attempt " + (i + 1) + " failed: " + ex.Message);
+                    AppLogger.Debug("launch", "Auto-select exception attempt=" + (i + 1) + " details=" + ex);
                 }
 
                 Thread.Sleep(AppConfig.AutoSelectServerRetryDelayMs);
             }
 
-            AppLogger.Warn("Auto server direct-select failed: ready CSelectServer object/server-list was not found.");
+            LastDecisionReason = lastReason;
+            AppLogger.Warn("Auto server direct-select failed: ready CSelectServer object/server-list was not found. LastReason=" + lastReason);
+            if (lastState.GameStatePointer != 0)
+            {
+                AppLogger.Debug("launch", "Auto-select final state gameState=0x" + lastState.GameStatePointer.ToString("X8") +
+                    " list=0x" + lastState.ListPointer.ToString("X8") + " count=" + lastState.Count);
+            }
             return false;
         }
 
@@ -101,30 +146,52 @@ namespace Shaiya_Invasion_Updater
             public int Count;
         }
 
-        private static bool TryGetServerListState(int processId, int serverIndex, out ServerListState state)
+        private static bool TryGetServerListState(int processId, int serverIndex, out ServerListState state, out string reason)
         {
             state = new ServerListState();
+            reason = "unknown";
 
             try
             {
                 int gameState = ReadInt32(processId, GameOffsets.SelectServerGlobalStatePointer);
-                if (gameState == 0) return false;
+                if (gameState == 0)
+                {
+                    reason = "gameState pointer is 0";
+                    return false;
+                }
 
                 int listPtr = ReadInt32(processId, gameState + GameOffsets.SelectServerListPointerOffset);
                 int count = ReadInt32(processId, gameState + GameOffsets.SelectServerCountOffset);
 
-                if (listPtr == 0) return false;
-                if (count <= serverIndex || count <= 0 || count > 128) return false;
+                if (listPtr == 0)
+                {
+                    reason = "server list pointer is 0 (gameState=0x" + gameState.ToString("X8") + ")";
+                    return false;
+                }
+
+                if (count <= 0 || count > 128)
+                {
+                    reason = "server count out of range: " + count;
+                    return false;
+                }
+
+                if (count <= serverIndex)
+                {
+                    reason = "server index out of range: index=" + serverIndex + " count=" + count;
+                    return false;
+                }
 
                 MemoryManager.ReadMemory(processId, listPtr + (serverIndex * GameOffsets.SelectServerEntrySize), 8);
 
                 state.GameStatePointer = gameState;
                 state.ListPointer = listPtr;
                 state.Count = count;
+                reason = "ready";
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
+                reason = "state read exception: " + ex.Message;
                 return false;
             }
         }
@@ -400,3 +467,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

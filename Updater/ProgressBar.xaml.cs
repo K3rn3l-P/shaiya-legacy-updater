@@ -1,6 +1,6 @@
-using System.Windows.Controls;
+﻿using System.Windows.Controls;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public partial class ProgressBar : UserControl
     {
@@ -11,3 +11,4 @@ namespace Shaiya_Invasion_Updater
         }
     }
 }
+

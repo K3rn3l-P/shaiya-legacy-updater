@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,7 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
-namespace Shaiya_Invasion_Updater
+namespace Shaiya_Duff_Updater
 {
     public partial class MainWindow : Window
     {
@@ -205,12 +205,16 @@ namespace Shaiya_Invasion_Updater
         private static void LaunchGameWorker(string gamePath)
         {
             int processId = 0;
+            Process launchedProcess = null;
             GameWindowController gameWindow = null;
             bool success = false;
 
             try
             {
+                AppLogger.Debug("launch", "LaunchGameWorker start. gamePath=" + gamePath);
                 SetGameLaunchStatus("Starting game...", AppConfig.LoginOverlaySubText);
+
+                EnsureDataSahReadyForLaunch();
 
                 ProcessStartInfo psi = new ProcessStartInfo(gamePath, AppConfig.GameArguments)
                 {
@@ -220,13 +224,16 @@ namespace Shaiya_Invasion_Updater
                 Process process = Process.Start(psi);
                 if (process == null) throw new InvalidOperationException("Game process could not be started.");
 
+                launchedProcess = process;
                 processId = process.Id;
+                AppLogger.Debug("launch", "Game process started. pid=" + processId);
                 gameWindow = GameWindowController.HideUntilReady(processId);
                 TryInjectCredentials(processId, out success);
             }
             catch (Exception ex)
             {
                 ExceptionManager.Submit(ex);
+                AppLogger.Debug("launch", "LaunchGameWorker exception. pid=" + processId + " msg=" + ex.Message);
                 if (processId != 0)
                 {
                     try { Process.GetProcessById(processId).Kill(); } catch { }
@@ -235,9 +242,11 @@ namespace Shaiya_Invasion_Updater
             }
             finally
             {
+                AppLogger.Debug("launch", "LaunchGameWorker finally. success=" + (success ? "1" : "0") + " pid=" + processId);
                 if (success)
                 {
                     try { if (gameWindow != null) gameWindow.Restore(); } catch { }
+                    WaitForGameExitAndReprotectDataSah(launchedProcess, processId);
                     Environment.Exit(0);
                 }
                 else
@@ -248,11 +257,99 @@ namespace Shaiya_Invasion_Updater
             }
         }
 
+        private static void WaitForGameExitAndReprotectDataSah(Process launchedProcess, int processId)
+        {
+            try
+            {
+                Utilities.ExecuteOnMainThread(delegate()
+                {
+                    if (MW != null) MW.Hide();
+                });
+            }
+            catch { }
+
+            try
+            {
+                if (launchedProcess == null && processId != 0)
+                {
+                    try { launchedProcess = Process.GetProcessById(processId); } catch { }
+                }
+
+                if (launchedProcess != null)
+                {
+                    AppLogger.Debug("launch", "Waiting game exit before re-protect. pid=" + launchedProcess.Id);
+                    launchedProcess.WaitForExit();
+                    AppLogger.Debug("launch", "Game exited. pid=" + launchedProcess.Id + " exitCode=" + launchedProcess.ExitCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Wait for game exit failed: " + ex.Message);
+            }
+
+            TryProtectDataSahAfterGameExit();
+        }
+
+        private static void TryProtectDataSahAfterGameExit()
+        {
+            if (!AppConfig.SahCryptEnabled) return;
+            if (!AppConfig.SahCryptProtectDataSahAfterGameExit) return;
+
+            string dataSah = AppPaths.InBase("data.sah");
+            if (!File.Exists(dataSah)) return;
+
+            try
+            {
+                SahCryptState before = SahCrypt.GetState(dataSah);
+                AppLogger.Debug("launch", "data.sah state before post-exit protect=" + before);
+                if (before != SahCryptState.PlainSah) return;
+
+                bool changed = SahCrypt.ProtectIfNeeded(dataSah, null);
+                SahCryptState after = SahCrypt.GetState(dataSah);
+                AppLogger.Info("data.sah protected after game exit. changed=" + (changed ? "1" : "0") + " stateAfter=" + after);
+                AppLogger.Debug("launch", "data.sah post-exit protect completed. stateAfter=" + after);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("data.sah post-exit protect failed: " + ex.Message);
+            }
+        }
+
+        private static void EnsureDataSahReadyForLaunch()
+        {
+            if (!AppConfig.SahCryptEnabled) return;
+
+            string dataSah = AppPaths.InBase("data.sah");
+            if (!File.Exists(dataSah)) return;
+
+            SahCryptState before = SahCrypt.GetState(dataSah);
+            AppLogger.Debug("launch", "data.sah state before launch=" + before);
+
+            if (before == SahCryptState.EncryptedEsah || before == SahCryptState.LegacyRolSah)
+            {
+                try
+                {
+                    bool changed = SahCrypt.UnlockIfNeeded(dataSah, null);
+                    SahCryptState after = SahCrypt.GetState(dataSah);
+                    AppLogger.Info("data.sah normalized for launch. changed=" + (changed ? "1" : "0") + " stateAfter=" + after);
+                    if (after != SahCryptState.PlainSah)
+                        throw new InvalidOperationException("data.sah was not converted to plain SAH.");
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException("Unable to prepare data.sah for launch. Verify [SahCrypt] key configuration. " + ex.Message, ex);
+                }
+            }
+        }
+
         private static void TryInjectCredentials(int processId, out bool success)
         {
             bool autoSelected = false;
             success = false;
+            LoginFlowPatchBackup loginFlowBackup = new LoginFlowPatchBackup();
+            bool loginFlowPatched = false;
 
+            AppLogger.Debug("launch", "TryInjectCredentials start. pid=" + processId);
             Thread.Sleep(2000);
             int pointer = 0;
             for (int i = 0; i < 150; i++)
@@ -263,33 +360,208 @@ namespace Shaiya_Invasion_Updater
             }
             if (pointer == 0) throw new InvalidOperationException("Game login buffer pointer was not initialized.");
 
+            AppLogger.Debug("launch", "Login pointer initialized. address=0x" + pointer.ToString("X8"));
             SetGameLaunchStatus("Logging in...", "Connecting with your account.");
-            InjectCredentials(processId, pointer);
+            InjectCredentials(processId, pointer, out loginFlowBackup, out loginFlowPatched);
+            AppLogger.Debug("launch", "Credentials injected.");
 
-            try
+            if (AppConfig.SkipServerSelectionFromClientConfig)
             {
-                SetGameLaunchStatus("Selecting server...", "Preparing character list.");
-                autoSelected = GameServerSelectAutomation.AutoSelectFirstServer(processId);
-            }
-            catch (Exception autoEx)
-            {
-                // Auto server selection is optional. Never kill the game for this step;
-                // the player can still select the server manually.
-                AppLogger.Warn("Auto server select failed without terminating game: " + autoEx.Message);
-            }
+                AppLogger.Info("SKIPSERVERSELECTION=1 detected in CONFIG.INI. Skipping launcher auto-select hook.");
+                AppLogger.Debug("launch", "Branch=SkipServerSelectionFromClientConfig.");
 
-            if (autoSelected)
-            {
-                SetGameLaunchStatus("Loading characters...", "Almost ready.");
-                Thread.Sleep(AppConfig.LoginOverlayRevealDelayMs);
+                int holdMs = Math.Max(0, AppConfig.LoginFlowPatchRestoreDelayMs);
+                if (holdMs > 0)
+                {
+                    AppLogger.Debug("launch", "Holding login flow patches for " + holdMs + "ms before skip-mode TCP wait.");
+                    Thread.Sleep(holdMs);
+                }
+
+                bool skipTcpReady = GameTcpPortTransitionWatcher.WaitForLoginToGameTransition(processId, AppConfig.SkipServerSelectionTcpTimeoutMs);
+                AppLogger.Debug("launch", "Skip-mode TCP wait finished. detected=" + (skipTcpReady ? "1" : "0"));
+
+                if (!skipTcpReady && AppConfig.AutoSelectRetryWhenServerListMissing)
+                {
+                    int retryDelay = Math.Max(0, AppConfig.AutoSelectRetryDelayMs);
+                    AppLogger.Warn("Skip-mode recovery triggered after TCP timeout. RetryDelayMs=" + retryDelay);
+                    if (retryDelay > 0) Thread.Sleep(retryDelay);
+
+                    try
+                    {
+                        if (Process.GetProcessById(processId).HasExited)
+                        {
+                            AppLogger.Warn("Skip-mode recovery skipped because the game process already exited.");
+                        }
+                        else
+                        {
+                            ReinjectCredentialsAndPatches(processId, pointer);
+                            loginFlowPatched = true;
+                            AppLogger.Debug("launch", "Skip-mode recovery reinjection completed.");
+
+                            if (holdMs > 0)
+                            {
+                                AppLogger.Debug("launch", "Holding login flow patches for " + holdMs + "ms before skip-mode recovery TCP wait.");
+                                Thread.Sleep(holdMs);
+                            }
+
+                            skipTcpReady = GameTcpPortTransitionWatcher.WaitForLoginToGameTransition(processId, AppConfig.SkipServerSelectionTcpTimeoutMs);
+                            AppLogger.Debug("launch", "Skip-mode recovery TCP wait finished. detected=" + (skipTcpReady ? "1" : "0"));
+                        }
+                    }
+                    catch
+                    {
+                        AppLogger.Warn("Skip-mode recovery skipped because the game process is no longer available.");
+                    }
+                }
+
+                if (skipTcpReady)
+                {
+                    TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "skip-server-selection-tcp-ready");
+                    loginFlowPatched = false;
+                    SetGameLaunchStatus("Loading characters...", "Almost ready.");
+                }
+                else
+                {
+                    AppLogger.Warn("Skip-mode did not reach character selection within timeout. Falling back to manual login visibility.");
+                    SetGameLaunchStatus("Manual login required", "Please continue in the game window.");
+                    Thread.Sleep(AppConfig.LoginOverlayFallbackRevealDelayMs);
+                }
             }
             else
             {
-                SetGameLaunchStatus("Manual server selection required", "Please continue in the game window.");
-                Thread.Sleep(AppConfig.LoginOverlayFallbackRevealDelayMs);
+                try
+                {
+                    SetGameLaunchStatus("Selecting server...", "Preparing character list.");
+                    autoSelected = GameServerSelectAutomation.AutoSelectFirstServer(processId);
+                    AppLogger.Debug("launch", "Auto-select attempted. result=" + (autoSelected ? "1" : "0"));
+
+                    if (!autoSelected && ShouldRetryAutoSelectBecauseServerListMissing())
+                    {
+                        int retryDelay = Math.Max(0, AppConfig.AutoSelectRetryDelayMs);
+                        AppLogger.Warn("Auto-select recovery triggered. Reason=" + GameServerSelectAutomation.LastDecisionReason + " Attempts=" + GameServerSelectAutomation.LastDecisionAttemptCount + " RetryDelayMs=" + retryDelay);
+                        if (retryDelay > 0) Thread.Sleep(retryDelay);
+
+                        ReinjectCredentialsAndPatches(processId, pointer);
+                        AppLogger.Debug("launch", "Auto-select recovery reinjection completed.");
+
+                        autoSelected = GameServerSelectAutomation.AutoSelectFirstServer(processId);
+                        AppLogger.Debug("launch", "Auto-select recovery attempt result=" + (autoSelected ? "1" : "0"));
+                    }
+                }
+                catch (Exception autoEx)
+                {
+                    // Auto server selection is optional. Never kill the game for this step;
+                    // the player can still select the server manually.
+                    AppLogger.Warn("Auto server select failed without terminating game: " + autoEx.Message);
+                }
+
+                if (autoSelected)
+                {
+                    bool tcpTransitionDetected = GameTcpPortTransitionWatcher.WaitForLoginToGameTransition(processId, AppConfig.TcpPortTransitionTimeoutMs);
+                    AppLogger.Debug("launch", "TCP wait after auto-select finished. detected=" + (tcpTransitionDetected ? "1" : "0"));
+                    if (tcpTransitionDetected)
+                    {
+                        TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "autoselect-success-tcp-ready");
+                        loginFlowPatched = false;
+                        SetGameLaunchStatus("Loading characters...", "Almost ready.");
+                    }
+                    else
+                    {
+                        AppLogger.Warn("TCP transition was not detected after auto-select. Using time-based reveal fallback.");
+                        TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "tcp-timeout-after-autoselect");
+                        loginFlowPatched = false;
+                        SetGameLaunchStatus("Loading characters...", "Almost ready.");
+                        Thread.Sleep(AppConfig.LoginOverlayRevealDelayMs);
+                    }
+                }
+                else
+                {
+                    string manualReason = GameServerSelectAutomation.LastDecisionReason;
+                    int manualAttempts = GameServerSelectAutomation.LastDecisionAttemptCount;
+                    AppLogger.Warn("Switching to manual server selection. Reason=" + manualReason + " Attempts=" + manualAttempts);
+                    AppLogger.Debug("launch", "Branch=ManualServerSelectionRequired reason=" + manualReason + " attempts=" + manualAttempts);
+                    SetGameLaunchStatus("Manual server selection required", "Please continue in the game window.");
+                    Thread.Sleep(AppConfig.LoginOverlayFallbackRevealDelayMs);
+                }
             }
 
             success = true;
+            AppLogger.Debug("launch", "TryInjectCredentials completed successfully.");
+        }
+
+        private struct LoginFlowPatchBackup
+        {
+            public byte[] Patch1;
+            public byte[] Patch2;
+            public byte[] Patch3;
+            public bool Captured;
+        }
+
+        private static void InjectCredentials(int processId, int pointer, out LoginFlowPatchBackup backup, out bool loginFlowPatched)
+        {
+            backup = CaptureLoginFlowPatchBackup(processId);
+            loginFlowPatched = false;
+
+            MemoryManager.WriteFixedAscii(processId, pointer + GameOffsets.UserIdOffsetFromPointer, MW.UserID, GameOffsets.UserIdBufferLength);
+            MemoryManager.WriteFixedAscii(processId, pointer + GameOffsets.TempPasswordOffsetFromPointer, MW.TempPw, GameOffsets.TempPasswordBufferLength);
+            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow1, GameOffsets.PatchLoginFlow1Bytes);
+            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow2, GameOffsets.PatchLoginFlow2Bytes);
+            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow3, GameOffsets.PatchLoginFlow3Bytes);
+            loginFlowPatched = true;
+            AppLogger.Debug("launch", "Login flow patch bytes written.");
+        }
+
+        private static void ReinjectCredentialsAndPatches(int processId, int pointer)
+        {
+            MemoryManager.WriteFixedAscii(processId, pointer + GameOffsets.UserIdOffsetFromPointer, MW.UserID, GameOffsets.UserIdBufferLength);
+            MemoryManager.WriteFixedAscii(processId, pointer + GameOffsets.TempPasswordOffsetFromPointer, MW.TempPw, GameOffsets.TempPasswordBufferLength);
+            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow1, GameOffsets.PatchLoginFlow1Bytes);
+            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow2, GameOffsets.PatchLoginFlow2Bytes);
+            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow3, GameOffsets.PatchLoginFlow3Bytes);
+        }
+
+        private static bool ShouldRetryAutoSelectBecauseServerListMissing()
+        {
+            if (!AppConfig.AutoSelectRetryWhenServerListMissing) return false;
+            string reason = GameServerSelectAutomation.LastDecisionReason ?? string.Empty;
+            return reason.IndexOf("server list pointer is 0", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static LoginFlowPatchBackup CaptureLoginFlowPatchBackup(int processId)
+        {
+            LoginFlowPatchBackup backup = new LoginFlowPatchBackup();
+            try
+            {
+                backup.Patch1 = MemoryManager.ReadMemory(processId, GameOffsets.PatchLoginFlow1, GameOffsets.PatchLoginFlow1Bytes.Length);
+                backup.Patch2 = MemoryManager.ReadMemory(processId, GameOffsets.PatchLoginFlow2, GameOffsets.PatchLoginFlow2Bytes.Length);
+                backup.Patch3 = MemoryManager.ReadMemory(processId, GameOffsets.PatchLoginFlow3, GameOffsets.PatchLoginFlow3Bytes.Length);
+                backup.Captured = true;
+                AppLogger.Debug("launch", "Login flow patch backup captured.");
+            }
+            catch (Exception ex)
+            {
+                backup.Captured = false;
+                AppLogger.Warn("Login flow patch backup capture failed: " + ex.Message);
+            }
+            return backup;
+        }
+
+        private static void TryRestoreLoginFlowPatches(int processId, LoginFlowPatchBackup backup, bool loginFlowPatched, string reason)
+        {
+            if (!loginFlowPatched || !backup.Captured) return;
+
+            try
+            {
+                MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow1, backup.Patch1);
+                MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow2, backup.Patch2);
+                MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow3, backup.Patch3);
+                AppLogger.Info("Login flow patches restored for fallback path. Reason=" + reason);
+                AppLogger.Debug("launch", "Login flow patches restored successfully. reason=" + reason);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Login flow patch restore failed: " + ex.Message + " Reason=" + reason);
+            }
         }
 
         private void ShowGameLaunchPanel(string title, string subtitle)
@@ -358,14 +630,6 @@ namespace Shaiya_Invasion_Updater
             }
             catch { }
         }
-
-        private static void InjectCredentials(int processId, int pointer)
-        {
-            MemoryManager.WriteFixedAscii(processId, pointer + GameOffsets.UserIdOffsetFromPointer, MW.UserID, GameOffsets.UserIdBufferLength);
-            MemoryManager.WriteFixedAscii(processId, pointer + GameOffsets.TempPasswordOffsetFromPointer, MW.TempPw, GameOffsets.TempPasswordBufferLength);
-            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow1, GameOffsets.PatchLoginFlow1Bytes);
-            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow2, GameOffsets.PatchLoginFlow2Bytes);
-            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow3, GameOffsets.PatchLoginFlow3Bytes);
-        }
     }
 }
+
