@@ -129,15 +129,6 @@ GameWindowOffscreenX=-32000
 GameWindowOffscreenY=-32000
 ```
 
-```ini
-[SahCrypt]
-Enabled=true
-UnlockPatchSah=true
-ProtectDataSahAfterPatch=true
-ProtectDataSahAfterGameExit=true
-; KeyHex / KeyText / KeyBase64 / Key (one format only)
-```
-
 ## Diagnostics endpoints (localhost only)
 
 Use these during setup from the server itself:

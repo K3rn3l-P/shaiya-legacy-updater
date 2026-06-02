@@ -23,8 +23,8 @@ if ($saveAccount) {
     save_device_account($deviceId, $userUid, $userId);
 }
 
-// Critical compatibility behavior:
-// API validates typed password, but game.exe receives the exact Users_Master.Pw value.
-// Example: UserID=2, Pw=2 => client receives/writes 2.
-$passwordForGame = get_db_password_for_game($userId, $password);
+// The game login server (sdev-login) now verifies credentials via PBKDF2 against Enpassword.
+// verify_pbkdf2(Enpassword, received_password) expects the plaintext password as input.
+// Returning the DB Pw field would fail because Pw != plaintext (e.g. Pw = UserUID "2").
+$passwordForGame = $password;
 respond(success_response($userId, $userUid, $passwordForGame));
