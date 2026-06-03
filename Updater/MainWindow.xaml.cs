@@ -361,6 +361,26 @@ namespace Shaiya_Duff_Updater
             if (pointer == 0) throw new InvalidOperationException("Game login buffer pointer was not initialized.");
 
             AppLogger.Debug("launch", "Login pointer initialized. address=0x" + pointer.ToString("X8"));
+
+            int netState = 0;
+            for (int i = 0; i < 150; i++)
+            {
+                netState = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, GameOffsets.SelectServerGlobalStatePointer, 4), 0);
+                if (netState != 0) break;
+                Thread.Sleep(200);
+            }
+            if (netState == 0) throw new InvalidOperationException("Network state pointer (DAT_022eed30) was not initialized.");
+            AppLogger.Debug("launch", "Network state ready. address=0x" + netState.ToString("X8"));
+
+            int loginSocket = 0;
+            for (int i = 0; i < 50; i++)
+            {
+                loginSocket = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, netState + 4, 4), 0);
+                if (loginSocket != 0) break;
+                Thread.Sleep(200);
+            }
+            AppLogger.Debug("launch", "Login socket. value=0x" + loginSocket.ToString("X8") + " ready=" + (loginSocket != 0 ? "1" : "0"));
+
             SetGameLaunchStatus("Logging in...", "Connecting with your account.");
             InjectCredentials(processId, pointer, out loginFlowBackup, out loginFlowPatched);
             AppLogger.Debug("launch", "Credentials injected.");

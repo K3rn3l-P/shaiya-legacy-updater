@@ -112,7 +112,7 @@ function clean_user_id($userId) {
     $userId = trim((string)$userId);
     $max = (int)$config['security']['max_userid_length'];
     if ($userId === '' || strlen($userId) > $max) respond(['ok' => false, 'message' => 'Invalid user ID.']);
-    if (!preg_match('/^[A-Za-z0-9_\-]+$/', $userId)) respond(['ok' => false, 'message' => 'Invalid user ID format.']);
+    if (!preg_match('/^[A-Za-z0-9_@!#.\-]+$/', $userId)) respond(['ok' => false, 'message' => 'Invalid user ID format.']);
     return $userId;
 }
 
@@ -139,6 +139,19 @@ function is_allowed_status($status) {
 function table_exists($tableName) {
     $row = db_fetch_one("SELECT CASE WHEN OBJECT_ID(?, N'U') IS NULL THEN 0 ELSE 1 END AS ExistsFlag", [$tableName]);
     return $row && (int)$row['ExistsFlag'] === 1;
+}
+
+function verify_enpassword($password, $enpassword) {
+    if (empty($enpassword)) return false;
+    if (substr($enpassword, 0, 13) === 'pbkdf2sha256:') {
+        $parts = explode(':', $enpassword, 4);
+        if (count($parts) !== 4) return false;
+        $salt     = hex2bin($parts[2]);
+        $expected = hex2bin($parts[3]);
+        $computed = hash_pbkdf2('sha256', $password, $salt, (int)$parts[1], 32, true);
+        return hash_equals($expected, $computed);
+    }
+    return password_verify($password, $enpassword);
 }
 
 function check_password_safe($userId, $password) {
@@ -169,28 +182,21 @@ function check_password_safe($userId, $password) {
             respond(['ok' => false, 'message' => 'Database query failed.', 'detail' => db_error_text(), 'sql' => $sql], 500);
         }
 
-        $stmt = db_query(
-            "SELECT TOP 1 UserUID, UserID, Pw, Status, Leave
+        $row = db_fetch_one(
+            "SELECT TOP 1 UserUID, UserID, Enpassword, Status, Leave
              FROM dbo.Users_Master WITH (NOLOCK)
-             WHERE UserID COLLATE SQL_Latin1_General_CP1_CS_AS = ?
-               AND Pw COLLATE SQL_Latin1_General_CP1_CS_AS = ?",
-            [$userId, $password]
+             WHERE UserID COLLATE SQL_Latin1_General_CP1_CS_AS = ?",
+            [$userId]
         );
+        if (!$row || !verify_enpassword($password, (string)($row['Enpassword'] ?? ''))) {
+            return null;
+        }
+        return $row;
     }
 
     $row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
     if ($row === false || $row === null) return null;
     return $row;
-}
-
-function get_db_password_for_game($userId, $fallbackPassword) {
-    $row = db_fetch_one(
-        "SELECT TOP 1 Pw FROM dbo.Users_Master WITH (NOLOCK)
-         WHERE UserID COLLATE SQL_Latin1_General_CP1_CS_AS = ?",
-        [$userId]
-    );
-    $pw = ($row && isset($row['Pw'])) ? (string)$row['Pw'] : '';
-    return $pw !== '' ? $pw : $fallbackPassword;
 }
 
 function ensure_active_login_row($row) {
@@ -270,4 +276,16 @@ function success_response($userId, $userUid, $passwordForGame) {
         'userUid' => (int)$userUid,
         'passwordForGame' => $passwordForGame,
     ];
+}
+
+function generate_login_token($userId) {
+    global $config;
+    $secret = isset($config['token_secret']) ? (string)$config['token_secret'] : '';
+    if ($secret === '') {
+        respond(['ok' => false, 'message' => 'Token secret not configured.',
+                 'hint' => 'Set token_secret in config.php and TokenSecret in GMSecurity.ini'], 500);
+    }
+    $window = (int)(time() / 300);
+    $hmac = hash_hmac('sha256', $userId . ':' . $window, $secret);
+    return substr($hmac, 0, 15);
 }

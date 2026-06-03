@@ -28,4 +28,8 @@ return [
         'max_userid_length' => 18,
         'max_password_length' => 32,
     ],
+    // Shared secret for saved-account HMAC token.
+    // Must match [SETTINGS] TokenSecret in Data/GMSecurity.ini on the login server.
+    // Generate: php -r "echo bin2hex(random_bytes(32));"
+    'token_secret' => $readEnv('TOKEN_SECRET', ''),
 ];
