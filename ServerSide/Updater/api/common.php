@@ -268,14 +268,26 @@ function remove_saved_account($deviceId, $userId) {
     );
 }
 
+function get_sah_key_hex() {
+    global $config;
+    $key = isset($config['sah_key_hex']) ? trim((string)$config['sah_key_hex']) : '';
+    // Only return a well-formed 64-char hex key; silently omit if not configured.
+    return (strlen($key) === 64 && ctype_xdigit($key)) ? $key : null;
+}
+
 function success_response($userId, $userUid, $passwordForGame) {
-    return [
+    $resp = [
         'ok' => true,
         'message' => 'Login successful.',
         'userId' => $userId,
         'userUid' => (int)$userUid,
         'passwordForGame' => $passwordForGame,
     ];
+    $sahKey = get_sah_key_hex();
+    if ($sahKey !== null) {
+        $resp['sahKey'] = $sahKey;
+    }
+    return $resp;
 }
 
 function generate_login_token($userId) {

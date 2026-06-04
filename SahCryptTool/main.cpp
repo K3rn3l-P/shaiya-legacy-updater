@@ -32,12 +32,11 @@ static constexpr size_t kNonceSize = 12;
 static constexpr size_t kTagSize = 16;
 static constexpr size_t kKeySize = 32;
 
-// Public sample key. Replace it with the same production key used by launcher.ini before release.
 static constexpr std::array<uint8_t, kKeySize> kFixedKey = {
-    0x5f, 0x3d, 0x06, 0x0d, 0xd6, 0x9b, 0x51, 0xbc,
-    0x26, 0x1e, 0x61, 0x70, 0xc0, 0x17, 0x98, 0x0e,
-    0x3a, 0x58, 0x1b, 0x6e, 0x01, 0xfa, 0xb5, 0x37,
-    0x3e, 0x5c, 0x8d, 0x9e, 0x26, 0x10, 0x32, 0x34
+    0x6d, 0x79, 0x25, 0x93, 0x09, 0xae, 0x38, 0xcf,
+    0x3a, 0x71, 0x31, 0x20, 0xa8, 0x62, 0x82, 0x35,
+    0x0f, 0x72, 0x41, 0x6b, 0xb4, 0xf8, 0xa7, 0xdc,
+    0x82, 0xc6, 0x45, 0x3a, 0xea, 0x09, 0xef, 0x50
 };
 
 #pragma pack(push, 1)
@@ -648,10 +647,14 @@ void PrintGuide()
     std::cout << "  - You choose encrypt or decrypt.\n";
     std::cout << "  - The file is converted in place.\n";
     std::cout << "  - The old version is kept as a backup in the same folder.\n\n";
-    std::cout << "Backup naming:\n";
-    std::cout << "  Encrypt -> old file becomes Data.dec.sah\n";
-    std::cout << "  Decrypt -> old file becomes Data.enc.sah\n\n";
-    std::cout << "Current active file name always stays Data.sah\n";
+    std::cout << "Operations:\n";
+    std::cout << "  Encrypt  ->  data.sah becomes ESAH (AES-256-GCM encrypted, unreadable by game directly)\n";
+    std::cout << "               Backup: data.dec.sah  (plaintext copy)\n\n";
+    std::cout << "  Decrypt  ->  data.sah returns to plaintext SAH (readable/editable)\n";
+    std::cout << "               Backup: data.enc.sah  (encrypted copy)\n\n";
+    std::cout << "CLI usage:\n";
+    std::cout << "  sahcrypt.exe encrypt <path\\data.sah>\n";
+    std::cout << "  sahcrypt.exe decrypt <path\\data.sah>\n";
 }
 
 int wmain(int argc, wchar_t* argv[])

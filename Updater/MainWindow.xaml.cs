@@ -20,6 +20,7 @@ namespace Shaiya_Duff_Updater
         public static List<string> Accounts = new List<string>();
         public string UserID;
         public string TempPw;
+        public string SahKeyHex;
         public byte? LogInType;
         private bool _launchingGame;
 
@@ -214,12 +215,19 @@ namespace Shaiya_Duff_Updater
                 AppLogger.Debug("launch", "LaunchGameWorker start. gamePath=" + gamePath);
                 SetGameLaunchStatus("Starting game...", AppConfig.LoginOverlaySubText);
 
-                EnsureDataSahReadyForLaunch();
+                // data.sah stays encrypted (ESAH) — sdev-client.dll decrypts at runtime via SDEV_SAH_KEY.
+                // EnsureDataSahReadyForLaunch() is intentionally skipped.
 
                 ProcessStartInfo psi = new ProcessStartInfo(gamePath, AppConfig.GameArguments)
                 {
-                    WorkingDirectory = AppPaths.BaseDirectory
+                    WorkingDirectory = AppPaths.BaseDirectory,
+                    UseShellExecute = false   // required to pass EnvironmentVariables
                 };
+
+                // Pass SAH decryption key to the child process (sdev-client reads and zeros it at DllMain).
+                // Key is received from server only after successful authentication — never stored locally.
+                if (AppConfig.SahCryptEnabled && !string.IsNullOrWhiteSpace(MW.SahKeyHex))
+                    psi.EnvironmentVariables["SDEV_SAH_KEY"] = MW.SahKeyHex;
 
                 Process process = Process.Start(psi);
                 if (process == null) throw new InvalidOperationException("Game process could not be started.");
