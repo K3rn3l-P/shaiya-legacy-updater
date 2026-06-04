@@ -12,8 +12,9 @@ namespace Shaiya_Duff_Updater
 
         static JsonHttpClient()
         {
-            try { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12; }
-            catch { }
+            // Tls (1.0) e Tls11 esclusi: il server accetta solo TLS 1.2+.
+            try { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13; }
+            catch { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; }
         }
 
         public static T Get<T>(string url)

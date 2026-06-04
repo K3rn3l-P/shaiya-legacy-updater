@@ -1,41 +1,56 @@
-# Dedicated rules for the updater subtree.
-# Production-safe defaults: runtime endpoints public, diagnostics/tooling local-only.
-
 Options -Indexes
 ServerSignature Off
 
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # HTTP → HTTPS
+    RewriteCond %{HTTPS} off
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    # manifest.json servito dinamicamente da manifest.php
+    RewriteRule ^manifest\.json$ manifest.php [L]
+</IfModule>
+
 <IfModule mod_authz_core.c>
-    # Public runtime access (launcher.php, api/auth, manifest, patch/recovery payloads).
     Require all granted
 
-    # Never expose server-side config files.
     <FilesMatch "^config(\.sample)?\.php$">
         Require all denied
     </FilesMatch>
 
-    # Never expose INI files directly.
     <FilesMatch "\.ini$">
         Require all denied
     </FilesMatch>
 
-    # Localhost only diagnostics in root.
     <FilesMatch "^test-(env|db|config)\.php$">
         Require local
     </FilesMatch>
 
-    # Block hidden/private artifacts.
-    <FilesMatch "^(\.git|\.env|composer\.(json|lock)|phpunit\.xml|\.htaccess)$">
+    <FilesMatch "\.(bak|orig|swp|sql|log|sh|bat|cmd)$">
+        Require all denied
+    </FilesMatch>
+
+    <FilesMatch "^(\.|composer\.(json|lock)|phpunit\.xml|README\.md)">
+        Require all denied
+    </FilesMatch>
+
+    # Blocca accesso diretto ai file .cache della cache SHA256
+    <FilesMatch "\.cache$">
         Require all denied
     </FilesMatch>
 </IfModule>
 
-# MIME helpers used by updater hosting.
 AddType text/plain .patch
 AddType application/json .json
 
-# Minimal security headers.
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
-    Header always set X-Frame-Options "SAMEORIGIN"
-    Header always set Referrer-Policy "no-referrer-when-downgrade"
+    Header always set X-Frame-Options "DENY"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+    Header always set Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=()"
+    Header always unset X-Powered-By
+    Header always unset Server
 </IfModule>

@@ -32,9 +32,4 @@ return [
     // Must match [SETTINGS] TokenSecret in Data/GMSecurity.ini on the login server.
     // Generate: php -r "echo bin2hex(random_bytes(32));"
     'token_secret' => $readEnv('TOKEN_SECRET', ''),
-    // AES-256 key for data.sah decryption — returned only after successful authentication.
-    // Must be 64 hex characters (32 bytes). NEVER put this in launcher.php or any public endpoint.
-    // Generate: php -r "echo bin2hex(random_bytes(32));"
-    // This value must match SahCryptKeyHex previously used by the updater to encrypt data.sah.
-    'sah_key_hex' => $readEnv('SAH_KEY_HEX', ''),
 ];

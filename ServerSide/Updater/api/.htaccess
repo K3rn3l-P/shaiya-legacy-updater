@@ -1,0 +1,6 @@
+# Blocca accesso diretto ai file interni (include, config).
+# Gli endpoint pubblici sono solo: auth/login.php, auth/login-saved.php,
+# auth/saved-accounts.php, auth/remove-saved-account.php.
+<FilesMatch "^(common|config|config\.sample)\.php$">
+    Require all denied
+</FilesMatch>

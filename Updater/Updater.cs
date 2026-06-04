@@ -21,6 +21,8 @@ namespace Shaiya_Duff_Updater
         private static Thread _thread;
         private static LauncherManifest _manifest;
 
+        public static LauncherManifest Manifest => _manifest;
+
         public static void Start()
         {
             _thread = new Thread(StartUpdater) { IsBackground = true };

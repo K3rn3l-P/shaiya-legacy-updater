@@ -10,6 +10,9 @@
         // AES-256 key (64 hex chars) for data.sah decryption.
         // Present only when server has sah_key_hex configured and auth succeeded.
         public string sahKey { get; set; }
+        // Token effimero (8 hex chars = uint32_t LE) pre-computato dal server.
+        // Passato via SDEV_AUTH_KEY a game.exe. Valido ~10 min. Client non ha mai il segreto.
+        public string launchToken { get; set; }
     }
 
     public class SavedAccountsResponse

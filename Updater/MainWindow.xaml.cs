@@ -21,6 +21,7 @@ namespace Shaiya_Duff_Updater
         public string UserID;
         public string TempPw;
         public string SahKeyHex;
+        public string LaunchToken;  // token effimero dal server, passato via SDEV_AUTH_KEY
         public byte? LogInType;
         private bool _launchingGame;
 
@@ -229,6 +230,15 @@ namespace Shaiya_Duff_Updater
                 if (AppConfig.SahCryptEnabled && !string.IsNullOrWhiteSpace(MW.SahKeyHex))
                     psi.EnvironmentVariables["SDEV_SAH_KEY"] = MW.SahKeyHex;
 
+                // Token effimero pre-computato dal server (HMAC "client:"+window, ClientSecret).
+                // Client NON ha il segreto — solo il token già pronto, valido ~10 min.
+                // sdev-login.dll verifica lato server con lo stesso ClientSecret da GMSecurity.ini.
+                if (!string.IsNullOrWhiteSpace(MW.LaunchToken))
+                    psi.EnvironmentVariables["SDEV_AUTH_KEY"] = MW.LaunchToken;
+
+                if (!VerifyClientDllIntegrity(AppPaths.BaseDirectory))
+                    throw new InvalidOperationException("Client integrity check failed. Please use Repair to restore the client files.");
+
                 Process process = Process.Start(psi);
                 if (process == null) throw new InvalidOperationException("Game process could not be started.");
 
@@ -246,7 +256,8 @@ namespace Shaiya_Duff_Updater
                 {
                     try { Process.GetProcessById(processId).Kill(); } catch { }
                 }
-                ShowLaunchFailed("Launch failed", "Please check updater.log and try again.");
+                string uiMsg = ex is InvalidOperationException ? ex.Message : "Please check updater.log and try again.";
+                ShowLaunchFailed("Launch failed", uiMsg);
             }
             finally
             {
@@ -657,6 +668,52 @@ namespace Shaiya_Duff_Updater
                 }));
             }
             catch { }
+        }
+
+        // Verifica SHA256 di sdev.dll contro l'entry nell'array files[] del manifest.
+        // Se il manifest non ha l'entry (o sha256 è vuoto), il check è skippato (opt-in).
+        // Ritorna false solo se l'hash è configurato E non corrisponde.
+        private static bool VerifyClientDllIntegrity(string gameDir)
+        {
+            const string dllName = "sdev.dll";
+            var manifest = Updater.Manifest;
+            if (manifest == null)
+            {
+                AppLogger.Debug("integrity", "Manifest null — skip check.");
+                return true;
+            }
+            if (manifest.files == null || manifest.files.Length == 0)
+            {
+                AppLogger.Debug("integrity", "Manifest files[] vuoto — skip check.");
+                return true;
+            }
+
+            var entry = System.Array.Find(manifest.files, f =>
+                string.Equals(f.file, dllName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(f.path, dllName, StringComparison.OrdinalIgnoreCase));
+
+            if (entry == null || string.IsNullOrEmpty(entry.sha256))
+            {
+                AppLogger.Debug("integrity", dllName + " non in manifest files[] — skip check.");
+                return true;
+            }
+
+            var dllPath = System.IO.Path.Combine(gameDir, dllName);
+            if (!System.IO.File.Exists(dllPath))
+            {
+                AppLogger.Warn(dllName + " non trovato — integrity check fallito.");
+                return false;
+            }
+
+            string actual;
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            using (var fs = System.IO.File.OpenRead(dllPath))
+                actual = BitConverter.ToString(sha.ComputeHash(fs)).Replace("-", "").ToLowerInvariant();
+
+            bool ok = string.Equals(actual, entry.sha256.ToLowerInvariant(), StringComparison.Ordinal);
+            AppLogger.Debug("integrity", dllName + " check=" + (ok ? "OK" : "FAIL") + " expected=" + entry.sha256 + " actual=" + actual);
+            if (!ok) AppLogger.Warn(dllName + " hash mismatch — client files corrotti.");
+            return ok;
         }
     }
 }
