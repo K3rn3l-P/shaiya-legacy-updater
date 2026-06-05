@@ -282,9 +282,7 @@ namespace Shaiya_Duff_Updater
                 key = LooksLikeHexKey(raw) ? ParseHexKey(raw) : Encoding.UTF8.GetBytes(AppConfig.SahCryptKey);
             }
 
-            if (key == null || key.Length != 32)
-                throw new InvalidOperationException("SahCrypt AES-256 key is missing or invalid. Put KeyHex, KeyBase64 or exact 32-byte KeyText under [SahCrypt] in server launcher.ini.");
-
+            if (key == null || key.Length != 32) return null;
             return key;
         }
 
@@ -337,6 +335,7 @@ namespace Shaiya_Duff_Updater
 
                 keyObject = new byte[objectLength];
                 byte[] key = ResolveKeyFromServerIni();
+                if (key == null) throw new InvalidOperationException("SahCrypt key is not available. Please log in first.");
                 ThrowIfFailed(Native.BCryptGenerateSymmetricKey(hAlg, out hKey, keyObject, keyObject.Length, key, key.Length, 0), "BCryptGenerateSymmetricKey");
 
                 return encrypt

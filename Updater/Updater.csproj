@@ -139,24 +139,11 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="icon.ico" />
-    <Resource Include="resources\account_rectangle.png" />
-    <Resource Include="resources\account_remove.png" />
-    <Resource Include="resources\button.png" />
-    <Resource Include="resources\button_close.png" />
-    <Resource Include="resources\button_close_active.jpg" />
-    <Resource Include="resources\button_close_hover.jpg" />
-    <Resource Include="resources\button_minimize.png" />
-    <Resource Include="resources\button_minimize_active.jpg" />
-    <Resource Include="resources\button_minimize_hover.jpg" />
-    <Resource Include="resources\button2.png" />
-    <Resource Include="resources\content.png" />
-    <Resource Include="resources\header.jpg" />
-    <Resource Include="resources\icon.ico" />
-    <Resource Include="resources\login.png" />
+    <Resource Include="resources\background.png" />
     <Resource Include="resources\logo.png" />
-    <Resource Include="resources\progress_bar.png" />
-    <Resource Include="resources\progress_bar_container.png" />
-    <Resource Include="resources\updater_background.png" />
+    <Resource Include="resources\icon.ico" />
+    <Resource Include="resources\fonts\Cinzel.ttf" />
+    <Resource Include="resources\fonts\Inter.ttf" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx" />

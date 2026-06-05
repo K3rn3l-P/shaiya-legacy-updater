@@ -29,13 +29,29 @@ namespace Shaiya_Duff_Updater
             _thread.Start();
         }
 
+        private static LauncherManifest DownloadManifest()
+        {
+            string json;
+            using (TimeoutWebClient wc = CreateWebClient())
+                json = wc.DownloadString(AppConfig.ManifestUrl);
+
+            if (!string.IsNullOrEmpty(AppConfig.ManifestSha256))
+            {
+                string actual = HashUtil.Sha256String(json);
+                if (!string.Equals(actual, AppConfig.ManifestSha256, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Manifest integrity check failed.");
+            }
+
+            return JsonHttpClient.FromJson<LauncherManifest>(json);
+        }
+
         private static void StartUpdater()
         {
             try
             {
                 AppConfig.Load();
                 Local_ClientVersion = VersionStore.ReadClientVersion();
-                _manifest = JsonHttpClient.Get<LauncherManifest>(AppConfig.ManifestUrl);
+                _manifest = DownloadManifest();
                 if (_manifest == null) _manifest = new LauncherManifest { clientVersion = Local_ClientVersion, launcherVersion = AppConfig.LocalLauncherVersion };
                 Server_ClientVersion = _manifest.clientVersion;
                 Server_UpdaterVersion = _manifest.launcherVersion;
@@ -68,13 +84,13 @@ namespace Shaiya_Duff_Updater
                 AppConfig.Load();
                 if (_manifest == null)
                 {
-                    try { _manifest = JsonHttpClient.Get<LauncherManifest>(AppConfig.ManifestUrl); }
+                    try { _manifest = DownloadManifest(); }
                     catch { _manifest = new LauncherManifest { clientVersion = Local_ClientVersion, launcherVersion = AppConfig.LocalLauncherVersion }; }
                 }
 
                 if (NeedsLauncherUpdate(_manifest))
                 {
-                    UpdateUpdater(_manifest.launcherFile);
+                    UpdateUpdater(_manifest);
                     return;
                 }
 
@@ -169,7 +185,7 @@ namespace Shaiya_Duff_Updater
             return manifest.launcherVersion > AppConfig.LocalLauncherVersion || min > AppConfig.LocalLauncherVersion;
         }
 
-        private static void UpdateUpdater(string launcherFile)
+        private static void UpdateUpdater(LauncherManifest manifest)
         {
             try
             {
@@ -180,9 +196,20 @@ namespace Shaiya_Duff_Updater
                     MainWindow.MW.TextBlockUpdaterStatus.Text = "Downloading launcher update";
                 });
 
-                string url = AppConfig.CombineUrl(AppConfig.BaseUrl, launcherFile);
+                string url = AppConfig.CombineUrl(AppConfig.BaseUrl, manifest.launcherFile);
                 string newExe = AppPaths.InBase("Updater.exe.new");
                 DownloadFileWithRetry(url, newExe, null);
+
+                if (!string.IsNullOrWhiteSpace(manifest.launcherSha256))
+                {
+                    string actual = HashUtil.Sha256File(newExe);
+                    AppLogger.Debug("updater", "Launcher SHA256 expected=" + manifest.launcherSha256 + " actual=" + actual);
+                    if (!string.Equals(actual, manifest.launcherSha256, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try { File.Delete(newExe); } catch { }
+                        throw new InvalidDataException("Launcher update integrity check failed.");
+                    }
+                }
 
                 string bat = AppPaths.InBase("apply_launcher_update.bat");
                 File.WriteAllText(bat,

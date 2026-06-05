@@ -74,6 +74,8 @@ namespace Shaiya_Duff_Updater
         public static bool KeepSuccessfulBackups = false;
         public static string MaintenanceMessage = "Server is under maintenance.";
 
+        public static string ManifestSha256 = "";
+
         public static bool SahCryptEnabled = true;
         public static bool SahCryptUnlockPatchSah = true;
         public static bool SahCryptProtectDataSahAfterPatch = true;
@@ -143,6 +145,7 @@ namespace Shaiya_Duff_Updater
                 RepairEnabled = ini.GetBool("Launcher", "RepairEnabled", RepairEnabled);
                 SelfUpdateEnabled = ini.GetBool("Launcher", "SelfUpdateEnabled", SelfUpdateEnabled);
                 MaintenanceMessage = ini.Get("Launcher", "MaintenanceMessage", MaintenanceMessage);
+                ManifestSha256 = ini.Get("Launcher", "ManifestSha256", ManifestSha256);
 
                 DownloadRetryCount = Math.Max(1, ini.GetInt("Update", "DownloadRetryCount", DownloadRetryCount));
                 DownloadTimeoutSeconds = Math.Max(5, ini.GetInt("Update", "DownloadTimeoutSeconds", DownloadTimeoutSeconds));
@@ -152,10 +155,8 @@ namespace Shaiya_Duff_Updater
                 SahCryptUnlockPatchSah = ini.GetBool("SahCrypt", "UnlockPatchSah", SahCryptUnlockPatchSah);
                 SahCryptProtectDataSahAfterPatch = ini.GetBool("SahCrypt", "ProtectDataSahAfterPatch", SahCryptProtectDataSahAfterPatch);
                 SahCryptProtectDataSahAfterGameExit = ini.GetBool("SahCrypt", "ProtectDataSahAfterGameExit", SahCryptProtectDataSahAfterGameExit);
-                SahCryptKeyHex = ini.Get("SahCrypt", "KeyHex", SahCryptKeyHex);
-                SahCryptKeyText = ini.Get("SahCrypt", "KeyText", SahCryptKeyText);
-                SahCryptKeyBase64 = ini.Get("SahCrypt", "KeyBase64", SahCryptKeyBase64);
-                SahCryptKey = ini.Get("SahCrypt", "Key", SahCryptKey);
+                // SahCrypt keys are NOT loaded from launcher.ini — key comes exclusively from login response.
+                // This prevents the AES key from being exposed in the publicly-accessible launcher config.
             }
             catch (Exception ex)
             {

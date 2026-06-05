@@ -1,11 +1,14 @@
 <?php
+declare(strict_types=1);
+require_once __DIR__ . '/manifest_core.php';
+
 header('Content-Type: text/plain; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-$baseDir = __DIR__;
+$baseDir  = __DIR__;
 $realFile = $baseDir . DIRECTORY_SEPARATOR . 'launcher.ini';
 
 if (!is_file($realFile)) {
@@ -20,5 +23,10 @@ if ($contents === false) {
     echo "; failed to read launcher.ini\n";
     exit;
 }
+
+// Compute ManifestSha256 inline — same logic as manifest.php, so hash is always consistent.
+// Per-file SHA256 uses the mtime cache (Files/.hashes/*.cache), so this is fast.
+$manifestSha256 = hash('sha256', generate_manifest_json($baseDir));
+$contents = preg_replace('/^ManifestSha256=.*$/m', 'ManifestSha256=' . $manifestSha256, $contents);
 
 echo $contents;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
@@ -29,34 +29,34 @@ namespace Shaiya_Duff_Updater
         private static void IsSelectedChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
             var item = (iMenuItem)sender;
-            item.ApplyVisual((bool)e.NewValue ? "#9A8774" : "#7A6754", (bool)e.NewValue);
+            item.ApplyVisual((bool)e.NewValue ? "#FFF3C9" : "#E8C881", (bool)e.NewValue);
         }
 
         private void ApplyVisual(string color, bool glow)
         {
             if (TextProperty == null) return;
             TextProperty.Foreground = (Brush)new BrushConverter().ConvertFrom(color);
-            TextProperty.Effect = glow ? new DropShadowEffect { Color = (Color)ColorConverter.ConvertFromString("#BAA794"), Direction = 320.0, ShadowDepth = 0.0, Opacity = 1.0, BlurRadius = 5.0 } : null;
+            TextProperty.Effect = glow ? new DropShadowEffect { Color = (Color)ColorConverter.ConvertFromString("#E8C881"), Direction = 320.0, ShadowDepth = 0.0, Opacity = 1.0, BlurRadius = 8.0 } : null;
         }
 
         private void UserControl_MouseEnter(object sender, MouseEventArgs e)
         {
-            if (!IsSelected) ApplyVisual("#9A8774", true);
+            if (!IsSelected) ApplyVisual("#FFF3C9", true);
         }
 
         private void UserControl_MouseLeave(object sender, MouseEventArgs e)
         {
-            if (!IsSelected) ApplyVisual("#7A6754", false);
+            if (!IsSelected) ApplyVisual("#E8C881", false);
         }
 
         private void UserControl_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (!IsSelected) ApplyVisual("#5A4734", true);
+            if (!IsSelected) ApplyVisual("#B8A065", true);
         }
 
         private void UserControl_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            if (!IsSelected) ApplyVisual("#7A6754", false);
+            if (!IsSelected) ApplyVisual("#E8C881", false);
             OpenLink();
         }
 
@@ -97,4 +97,3 @@ namespace Shaiya_Duff_Updater
         }
     }
 }
-

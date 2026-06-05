@@ -1,4 +1,6 @@
-﻿namespace Shaiya_Duff_Updater
+﻿using System.Collections.Generic;
+
+namespace Shaiya_Duff_Updater
 {
     public class LoginResponse
     {
@@ -26,6 +28,55 @@
     {
         public bool ok { get; set; }
         public string message { get; set; }
+    }
+
+    public class WebNewsItem
+    {
+        public int id { get; set; }
+        public string title { get; set; }
+        public string preview { get; set; }
+        public string author { get; set; }
+        public string date { get; set; }
+    }
+
+    public class WebNewsResponse
+    {
+        public bool ok { get; set; }
+        public List<WebNewsItem> news { get; set; }
+    }
+
+    public class RankingItem
+    {
+        public int rank { get; set; }
+        public string name { get; set; }
+        public string className { get; set; }
+        public int level { get; set; }
+        public int kills { get; set; }
+        public string guild { get; set; }
+        public int country { get; set; }
+        public bool online { get; set; }
+    }
+
+    public class RankingsResponse
+    {
+        public bool ok { get; set; }
+        public List<RankingItem> rankings { get; set; }
+    }
+
+    public class BossItem
+    {
+        public string name { get; set; }
+        public int level { get; set; }
+        public string mapName { get; set; }
+        public string lastKilledBy { get; set; }
+        public int secondsUntilSpawn { get; set; }
+        public int respawnSeconds { get; set; }
+    }
+
+    public class BossesResponse
+    {
+        public bool ok { get; set; }
+        public List<BossItem> bosses { get; set; }
     }
 }
 

@@ -1,6 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Security;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Web.Script.Serialization;
 
@@ -10,11 +13,31 @@ namespace Shaiya_Duff_Updater
     {
         private static readonly JavaScriptSerializer Serializer = new JavaScriptSerializer();
 
+        // SHA256 hex of the server certificate's public key bytes (GetPublicKey()).
+        // Empty string = pinning disabled; only TLS 1.2+ chain validation is enforced.
+        // Update this constant whenever the server certificate key changes.
+        private const string PinnedCertPubKeyHex = "";
+
         static JsonHttpClient()
         {
             // Tls (1.0) e Tls11 esclusi: il server accetta solo TLS 1.2+.
             try { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13; }
             catch { ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12; }
+
+            ServicePointManager.ServerCertificateValidationCallback = ValidateCertificate;
+        }
+
+        private static bool ValidateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors)
+        {
+            if (errors != SslPolicyErrors.None) return false;
+            if (string.IsNullOrEmpty(PinnedCertPubKeyHex)) return true;
+
+            byte[] keyBytes = certificate.GetPublicKey();
+            using (SHA256 sha = SHA256.Create())
+            {
+                string actual = BitConverter.ToString(sha.ComputeHash(keyBytes)).Replace("-", "").ToLowerInvariant();
+                return string.Equals(actual, PinnedCertPubKeyHex, StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         public static T Get<T>(string url)

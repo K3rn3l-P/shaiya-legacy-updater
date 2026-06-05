@@ -24,6 +24,13 @@ namespace Shaiya_Duff_Updater
         public string LaunchToken;  // token effimero dal server, passato via SDEV_AUTH_KEY
         public byte? LogInType;
         private bool _launchingGame;
+        private bool _newsLoaded;
+        private bool _rankingLoaded;
+        private bool _bossesLoaded;
+        private string _activeTab = "News";
+        private System.Windows.Threading.DispatcherTimer _bossTimer;
+        private readonly List<(long nextSpawnUtc, TextBlock timerBlock)> _bossTimerTargets
+            = new List<(long, TextBlock)>();
 
         public MainWindow()
         {
@@ -39,7 +46,8 @@ namespace Shaiya_Duff_Updater
                 Text = "Log in using another account",
                 Link = "Updater:LogInNewAccount",
                 HorizontalAlignment = HorizontalAlignment.Center,
-                FontSize = 18.0
+                FontSize = 18.0,
+                Width = 270
             };
             RefreshLogInView();
         }
@@ -49,16 +57,16 @@ namespace Shaiya_Duff_Updater
             try { DragMove(); } catch { }
         }
 
-        private ImageBrush Brush(string uri) { return new ImageBrush(new BitmapImage(new Uri("pack://application:,,,/Resources/" + uri))); }
+        private static SolidColorBrush Cb(byte a, byte r, byte g, byte b) { return new SolidColorBrush(Color.FromArgb(a, r, g, b)); }
 
-        private void ButtonMinimize_MouseEnter(object sender, MouseEventArgs e) { ButtonMinimize.Fill = Brush("button_minimize_hover.jpg"); }
-        private void ButtonMinimize_MouseLeave(object sender, MouseEventArgs e) { ButtonMinimize.Fill = Brush("button_minimize.png"); }
-        private void ButtonMinimize_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { ButtonMinimize.Fill = Brush("button_minimize_active.jpg"); }
-        private void ButtonMinimize_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { ButtonMinimize.Fill = Brush("button_minimize.png"); WindowState = WindowState.Minimized; }
-        private void ButtonClose_MouseEnter(object sender, MouseEventArgs e) { ButtonClose.Fill = Brush("button_close_hover.jpg"); }
-        private void ButtonClose_MouseLeave(object sender, MouseEventArgs e) { ButtonClose.Fill = Brush("button_close.png"); }
-        private void ButtonClose_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { ButtonClose.Fill = Brush("button_close_active.jpg"); }
-        private void ButtonClose_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { ButtonClose.Fill = Brush("button_close.png"); Close(); }
+        private void ButtonMinimize_MouseEnter(object sender, MouseEventArgs e) { ButtonMinimize.Fill = Cb(0x26, 0xE8, 0xC8, 0x81); }
+        private void ButtonMinimize_MouseLeave(object sender, MouseEventArgs e) { ButtonMinimize.Fill = new SolidColorBrush(Colors.Transparent); }
+        private void ButtonMinimize_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { ButtonMinimize.Fill = Cb(0x44, 0xE8, 0xC8, 0x81); }
+        private void ButtonMinimize_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { ButtonMinimize.Fill = new SolidColorBrush(Colors.Transparent); WindowState = WindowState.Minimized; }
+        private void ButtonClose_MouseEnter(object sender, MouseEventArgs e) { ButtonClose.Fill = Cb(0x26, 0xF4, 0x6A, 0x6A); }
+        private void ButtonClose_MouseLeave(object sender, MouseEventArgs e) { ButtonClose.Fill = new SolidColorBrush(Colors.Transparent); }
+        private void ButtonClose_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { ButtonClose.Fill = Cb(0x44, 0xF4, 0x6A, 0x6A); }
+        private void ButtonClose_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { ButtonClose.Fill = new SolidColorBrush(Colors.Transparent); Close(); }
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             if (_launchingGame) e.Cancel = true;
@@ -74,6 +82,381 @@ namespace Shaiya_Duff_Updater
             sb.Begin();
             LinkLogIn.IsSelected = false;
             LinkLatestNews.IsSelected = true;
+            SetActiveTab(_activeTab);
+        }
+
+        private void TabBtn_Click(object sender, MouseButtonEventArgs e)
+        {
+            SetActiveTab((string)((FrameworkElement)sender).Tag);
+        }
+
+        private void SetActiveTab(string tab)
+        {
+            _activeTab = tab;
+            SetTabStyle(TabBtnNews, TabTxtNews, tab == "News");
+            SetTabStyle(TabBtnRanking, TabTxtRanking, tab == "Ranking");
+            SetTabStyle(TabBtnBosses, TabTxtBosses, tab == "Bosses");
+            NewsScrollViewer.Visibility   = tab == "News"    ? Visibility.Visible : Visibility.Collapsed;
+            RankingScrollViewer.Visibility = tab == "Ranking" ? Visibility.Visible : Visibility.Collapsed;
+            BossesScrollViewer.Visibility  = tab == "Bosses"  ? Visibility.Visible : Visibility.Collapsed;
+            if (tab == "News"    && !_newsLoaded)    LoadNews();
+            if (tab == "Ranking" && !_rankingLoaded) LoadRankings();
+            if (tab == "Bosses"  && !_bossesLoaded)  LoadBosses();
+        }
+
+        private static void SetTabStyle(Border btn, TextBlock txt, bool active)
+        {
+            btn.Background   = active ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DE8C881"))
+                                      : new SolidColorBrush(Colors.Transparent);
+            btn.BorderBrush  = active ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4DE8C881"))
+                                      : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1AE8C881"));
+            txt.Foreground   = active ? (Brush)new BrushConverter().ConvertFrom("#E8C881")
+                                      : (Brush)new BrushConverter().ConvertFrom("#7BE8C881");
+            txt.FontWeight   = active ? FontWeights.SemiBold : FontWeights.Normal;
+        }
+
+        private void LoadNews()
+        {
+            _newsLoaded = true;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    string rawUrl = string.IsNullOrEmpty(AppConfig.NewsUrl) ? "api/news.php" : AppConfig.NewsUrl;
+                    string url = AppConfig.CombineUrl(AppConfig.BaseUrl, rawUrl);
+                    var resp = JsonHttpClient.Get<WebNewsResponse>(url);
+                    Dispatcher.Invoke(() => PopulateNews(resp));
+                }
+                catch
+                {
+                    Dispatcher.Invoke(() => PopulateNews(null));
+                }
+            });
+        }
+
+        private void PopulateNews(WebNewsResponse resp)
+        {
+            NewsPanel.Children.Clear();
+            if (resp == null || !resp.ok || resp.news == null || resp.news.Count == 0)
+            {
+                NewsPanel.Children.Add(MakeNewsPlaceholder("No news available."));
+                return;
+            }
+            foreach (var item in resp.news)
+                NewsPanel.Children.Add(BuildNewsCard(item));
+        }
+
+        private static TextBlock MakeNewsPlaceholder(string text)
+        {
+            return new TextBlock
+            {
+                Text = text,
+                Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#9BE0E0E0")),
+                FontFamily = new FontFamily("pack://application:,,,/resources/fonts/#Inter"),
+                FontSize = 13,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 30, 0, 0)
+            };
+        }
+
+        private static FrameworkElement BuildNewsCard(WebNewsItem item)
+        {
+            var gold = (Brush)new BrushConverter().ConvertFrom("#E8C881");
+            var grayDate = (Brush)new BrushConverter().ConvertFrom("#99E0E0E0");
+            var bodyColor = (Brush)new BrushConverter().ConvertFrom("#C0E0E0E0");
+            var cinzel = new FontFamily("pack://application:,,,/resources/fonts/#Cinzel");
+            var inter = new FontFamily("pack://application:,,,/resources/fonts/#Inter");
+
+            // header: title left, date right
+            var headerGrid = new Grid();
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var titleBlock = new TextBlock
+            {
+                Text = item.title ?? "",
+                Foreground = gold,
+                FontFamily = cinzel,
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(titleBlock, 0);
+
+            var dateBlock = new TextBlock
+            {
+                Text = item.date ?? "",
+                Foreground = grayDate,
+                FontFamily = inter,
+                FontSize = 10,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(10, 0, 0, 0)
+            };
+            Grid.SetColumn(dateBlock, 1);
+
+            headerGrid.Children.Add(titleBlock);
+            headerGrid.Children.Add(dateBlock);
+
+            var panel = new StackPanel();
+            panel.Children.Add(headerGrid);
+
+            if (!string.IsNullOrWhiteSpace(item.preview))
+            {
+                panel.Children.Add(new System.Windows.Shapes.Rectangle
+                {
+                    Height = 1,
+                    Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DE8C881")),
+                    Margin = new Thickness(0, 8, 0, 8)
+                });
+                panel.Children.Add(new TextBlock
+                {
+                    Text = item.preview,
+                    Foreground = bodyColor,
+                    FontFamily = inter,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap
+                });
+            }
+
+            return new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#99121216")),
+                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4DE8C881")),
+                BorderThickness = new Thickness(1),
+                Margin = new Thickness(0, 0, 0, 10),
+                Padding = new Thickness(16, 12, 16, 12),
+                Child = panel
+            };
+        }
+
+        // ── RANKINGS ──────────────────────────────────────────────────────────
+
+        private void LoadRankings()
+        {
+            _rankingLoaded = true;
+            RankingRows.Children.Clear();
+            RankingRows.Children.Add(MakeNewsPlaceholder("Loading..."));
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    string url = AppConfig.CombineUrl(AppConfig.BaseUrl, "api/rankings.php");
+                    var resp = JsonHttpClient.Get<RankingsResponse>(url);
+                    Dispatcher.Invoke(() => PopulateRankings(resp));
+                }
+                catch { Dispatcher.Invoke(() => PopulateRankings(null)); }
+            });
+        }
+
+        private void PopulateRankings(RankingsResponse resp)
+        {
+            RankingRows.Children.Clear();
+            if (resp == null || !resp.ok || resp.rankings == null || resp.rankings.Count == 0)
+            { RankingRows.Children.Add(MakeNewsPlaceholder("No rankings data.")); return; }
+
+            RankingRows.Children.Add(BuildRankingRow(null));
+            RankingRows.Children.Add(new System.Windows.Shapes.Rectangle
+            { Height = 1, Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DE8C881")), Margin = new Thickness(0, 2, 0, 4) });
+
+            foreach (var item in resp.rankings)
+                RankingRows.Children.Add(BuildRankingRow(item));
+        }
+
+        private static FrameworkElement BuildRankingRow(RankingItem item)
+        {
+            bool isHeader = item == null;
+            var cinzel = new FontFamily("pack://application:,,,/resources/fonts/#Cinzel");
+            var inter  = new FontFamily("pack://application:,,,/resources/fonts/#Inter");
+            var gold   = (Brush)new BrushConverter().ConvertFrom("#E8C881");
+            var hdrClr = (Brush)new BrushConverter().ConvertFrom("#7BE8C881");
+            var body   = (Brush)new BrushConverter().ConvertFrom("#C8E0E0E0");
+
+            var grid = new Grid { Margin = new Thickness(0, 1, 0, 1) };
+            int[] widths = { 36, 170, 100, 44, 80, 150, 60, 40 };
+            foreach (int w in widths) grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(w) });
+
+            string[] values = isHeader
+                ? new[] { "#", "Name", "Class", "Lv", "Kills", "Guild", "Side", "●" }
+                : new[] { item.rank.ToString(), item.name, item.className, item.level.ToString(),
+                          item.kills.ToString("N0"), item.guild ?? "",
+                          item.country == 0 ? "AoL" : "UoF",
+                          item.online ? "●" : "" };
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                Brush fg = isHeader ? hdrClr : (i == 0 ? gold : body);
+                if (!isHeader)
+                {
+                    if (i == 6) fg = item.country == 0
+                        ? new SolidColorBrush((Color)ColorConverter.ConvertFromString("#6AAFFF"))
+                        : new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF7070"));
+                    if (i == 7 && item.online) fg = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#22C55E"));
+                }
+
+                var tb = new TextBlock
+                {
+                    Text = values[i],
+                    FontFamily = isHeader ? cinzel : inter,
+                    FontSize = isHeader ? 10 : 12,
+                    Foreground = fg,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Padding = new Thickness(0, 2, 4, 2)
+                };
+                Grid.SetColumn(tb, i);
+                grid.Children.Add(tb);
+            }
+            return grid;
+        }
+
+        // ── BOSSES ────────────────────────────────────────────────────────────
+
+        private void LoadBosses()
+        {
+            _bossesLoaded = true;
+            BossesPanel.Children.Clear();
+            BossesPanel.Children.Add(MakeNewsPlaceholder("Loading..."));
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    string url = AppConfig.CombineUrl(AppConfig.BaseUrl, "api/bosses.php");
+                    var resp = JsonHttpClient.Get<BossesResponse>(url);
+                    Dispatcher.Invoke(() => PopulateBosses(resp));
+                }
+                catch { Dispatcher.Invoke(() => PopulateBosses(null)); }
+            });
+        }
+
+        private void PopulateBosses(BossesResponse resp)
+        {
+            _bossTimer?.Stop();
+            _bossTimerTargets.Clear();
+            BossesPanel.Children.Clear();
+
+            if (resp == null || !resp.ok || resp.bosses == null || resp.bosses.Count == 0)
+            { BossesPanel.Children.Add(MakeNewsPlaceholder("No boss data.")); return; }
+
+            long nowUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            foreach (var boss in resp.bosses)
+            {
+                var (card, timerBlock) = BuildBossCard(boss, nowUtc);
+                BossesPanel.Children.Add(card);
+                if (timerBlock != null)
+                    _bossTimerTargets.Add((nowUtc + boss.secondsUntilSpawn, timerBlock));
+            }
+
+            if (_bossTimerTargets.Count > 0)
+            {
+                _bossTimer = new System.Windows.Threading.DispatcherTimer
+                { Interval = TimeSpan.FromSeconds(1) };
+                _bossTimer.Tick += BossTimer_Tick;
+                _bossTimer.Start();
+            }
+        }
+
+        private void BossTimer_Tick(object sender, EventArgs e)
+        {
+            long nowUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var green = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#22C55E"));
+            var gold  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E8C881"));
+
+            for (int i = _bossTimerTargets.Count - 1; i >= 0; i--)
+            {
+                var (nextSpawnUtc, timerBlock) = _bossTimerTargets[i];
+                long remaining = nextSpawnUtc - nowUtc;
+                if (remaining <= 0)
+                {
+                    timerBlock.Text = "ALIVE";
+                    timerBlock.Foreground = green;
+                    _bossTimerTargets.RemoveAt(i);
+                }
+                else
+                {
+                    int h = (int)(remaining / 3600);
+                    int m = (int)((remaining % 3600) / 60);
+                    int s = (int)(remaining % 60);
+                    timerBlock.Text = $"{h:D2}h {m:D2}m {s:D2}s";
+                    timerBlock.Foreground = gold;
+                }
+            }
+        }
+
+        private static (Border card, TextBlock timerBlock) BuildBossCard(BossItem boss, long nowUtc)
+        {
+            var gold   = (Brush)new BrushConverter().ConvertFrom("#E8C881");
+            var gray   = (Brush)new BrushConverter().ConvertFrom("#99E0E0E0");
+            var body   = (Brush)new BrushConverter().ConvertFrom("#C0E0E0E0");
+            var green  = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#22C55E"));
+            var cinzel = new FontFamily("pack://application:,,,/resources/fonts/#Cinzel");
+            var inter  = new FontFamily("pack://application:,,,/resources/fonts/#Inter");
+
+            bool alive = boss.secondsUntilSpawn <= 0;
+
+            // Header: name left, timer right
+            var header = new Grid();
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var nameBlock = new TextBlock
+            {
+                Text = boss.name ?? "",
+                Foreground = gold, FontFamily = cinzel, FontSize = 13, FontWeight = FontWeights.SemiBold,
+                TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(nameBlock, 0);
+
+            TextBlock timerBlock = new TextBlock
+            {
+                FontFamily = cinzel, FontSize = 13, FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0)
+            };
+            if (alive)
+            {
+                timerBlock.Text = "ALIVE";
+                timerBlock.Foreground = green;
+            }
+            else
+            {
+                int h = boss.secondsUntilSpawn / 3600;
+                int m = (boss.secondsUntilSpawn % 3600) / 60;
+                int s = boss.secondsUntilSpawn % 60;
+                timerBlock.Text = $"{h:D2}h {m:D2}m {s:D2}s";
+                timerBlock.Foreground = gold;
+            }
+            Grid.SetColumn(timerBlock, 1);
+            header.Children.Add(nameBlock);
+            header.Children.Add(timerBlock);
+
+            // Sub-line: Lv + map + killer
+            string sub = $"Lv {boss.level}  ·  {boss.mapName}";
+            if (!string.IsNullOrEmpty(boss.lastKilledBy))
+                sub += $"  ·  Last kill: {boss.lastKilledBy}";
+
+            var subBlock = new TextBlock
+            {
+                Text = sub, Foreground = gray, FontFamily = inter, FontSize = 11,
+                Margin = new Thickness(0, 6, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis
+            };
+
+            var panel = new StackPanel();
+            panel.Children.Add(header);
+            panel.Children.Add(subBlock);
+
+            var card = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#99121216")),
+                BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4DE8C881")),
+                BorderThickness = new Thickness(1),
+                Margin = new Thickness(0, 0, 0, 8),
+                Padding = new Thickness(14, 10, 14, 10),
+                Child = panel
+            };
+
+            return (card, alive ? null : timerBlock);
         }
 
         public void ShowLogIn()
@@ -246,7 +629,8 @@ namespace Shaiya_Duff_Updater
                 processId = process.Id;
                 AppLogger.Debug("launch", "Game process started. pid=" + processId);
                 gameWindow = GameWindowController.HideUntilReady(processId);
-                TryInjectCredentials(processId, out success);
+                try { TryInjectCredentials(processId, out success); }
+                finally { MW.TempPw = null; MW.LaunchToken = null; MW.SahKeyHex = null; }
             }
             catch (Exception ex)
             {

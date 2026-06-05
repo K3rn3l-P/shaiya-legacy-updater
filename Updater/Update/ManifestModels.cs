@@ -8,6 +8,7 @@
         public bool maintenance { get; set; }
         public string maintenanceMessage { get; set; }
         public string launcherFile { get; set; }
+        public string launcherSha256 { get; set; }
         public PatchManifestItem[] patches { get; set; }
         public ManifestFileItem[] files { get; set; }
         public NewsItem[] news { get; set; }

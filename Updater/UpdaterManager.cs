@@ -108,6 +108,8 @@ namespace Shaiya_Duff_Updater
                         MainWindow.MW.TempPw = response.passwordForGame;
                         MainWindow.MW.SahKeyHex = response.sahKey;
                         MainWindow.MW.LaunchToken = response.launchToken;
+                        if (!string.IsNullOrEmpty(response.sahKey))
+                            AppConfig.SahCryptKeyHex = response.sahKey;
                         MainWindow.MW.LoadAnimation.Visibility = Visibility.Hidden;
 
                         if (saveAccount && !string.IsNullOrEmpty(MainWindow.MW.UserID))

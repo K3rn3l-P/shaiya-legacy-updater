@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -23,15 +23,15 @@ namespace Shaiya_Duff_Updater
         private void UserControl_MouseLeave(object sender, MouseEventArgs e) { GridAccountRemove.Visibility = Visibility.Hidden; }
 
         private static Brush ColorBrush(string color) { return (Brush)new BrushConverter().ConvertFrom(color); }
-        private static DropShadowEffect Glow(string color) { return new DropShadowEffect { Color = (Color)ColorConverter.ConvertFromString(color), Direction = 320.0, ShadowDepth = 0.0, Opacity = 1.0, BlurRadius = 5.0 }; }
+        private static DropShadowEffect Glow(string color) { return new DropShadowEffect { Color = (Color)ColorConverter.ConvertFromString(color), Direction = 320.0, ShadowDepth = 0.0, Opacity = 1.0, BlurRadius = 8.0 }; }
 
-        private void GridAccountRemove_MouseEnter(object sender, MouseEventArgs e) { TextBlockX.Foreground = ColorBrush("#9A8774"); TextBlockX.Effect = Glow("#BAA794"); }
-        private void GridAccountRemove_MouseLeave(object sender, MouseEventArgs e) { TextBlockX.Foreground = ColorBrush("#7A6754"); TextBlockX.Effect = null; }
-        private void GridAccountRemove_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { TextBlockX.Foreground = ColorBrush("#5A4734"); TextBlockX.Effect = Glow("#7A6754"); }
+        private void GridAccountRemove_MouseEnter(object sender, MouseEventArgs e) { TextBlockX.Foreground = ColorBrush("#FFF3C9"); TextBlockX.Effect = Glow("#E8C881"); }
+        private void GridAccountRemove_MouseLeave(object sender, MouseEventArgs e) { TextBlockX.Foreground = ColorBrush("#E8C881"); TextBlockX.Effect = null; }
+        private void GridAccountRemove_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { TextBlockX.Foreground = ColorBrush("#B8A065"); TextBlockX.Effect = Glow("#E8C881"); }
 
         private void GridAccountRemove_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            TextBlockX.Foreground = ColorBrush("#7A6754");
+            TextBlockX.Foreground = ColorBrush("#E8C881");
             TextBlockX.Effect = null;
             if (MessageDialog.Display("Confirmation", "Are you sure you want to remove " + UserID + " from your saved accounts ?", "YesNo") != "Yes") return;
             UpdaterManager.RemoveSavedAccount(UserID);
@@ -40,10 +40,9 @@ namespace Shaiya_Duff_Updater
             MainWindow.MW.RefreshLogInView();
         }
 
-        private void GridAccountName_MouseEnter(object sender, MouseEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#9A8774"); TextBlockUserID.Effect = Glow("#BAA794"); }
-        private void GridAccountName_MouseLeave(object sender, MouseEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#7A6754"); TextBlockUserID.Effect = null; }
-        private void GridAccountName_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#5A4734"); TextBlockUserID.Effect = Glow("#7A6754"); }
-        private void GridAccountName_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#7A6754"); TextBlockUserID.Effect = null; MainWindow.MW.LogInId(UserID); }
+        private void GridAccountName_MouseEnter(object sender, MouseEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#FFF3C9"); TextBlockUserID.Effect = Glow("#E8C881"); }
+        private void GridAccountName_MouseLeave(object sender, MouseEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#E8C881"); TextBlockUserID.Effect = null; }
+        private void GridAccountName_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#B8A065"); TextBlockUserID.Effect = Glow("#E8C881"); }
+        private void GridAccountName_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) { TextBlockUserID.Foreground = ColorBrush("#E8C881"); TextBlockUserID.Effect = null; MainWindow.MW.LogInId(UserID); }
     }
 }
-
