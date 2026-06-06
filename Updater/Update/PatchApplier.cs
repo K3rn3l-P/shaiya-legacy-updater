@@ -38,6 +38,7 @@ namespace Shaiya_Duff_Updater
         {
             string updateSah = Path.Combine(extractedDir, "update.sah");
             string updateSaf = Path.Combine(extractedDir, "update.saf");
+            string deleteLst = Path.Combine(extractedDir, "delete.lst");
 
             bool hasSah = File.Exists(updateSah) && File.Exists(updateSaf);
             if (hasSah)
@@ -50,6 +51,33 @@ namespace Shaiya_Duff_Updater
             else
             {
                 CopyPatchFiles(extractedDir, AppPaths.BaseDirectory, tx, progress);
+            }
+
+            if (File.Exists(deleteLst))
+                ApplyDeleteList(deleteLst, tx);
+        }
+
+        private static void ApplyDeleteList(string deleteLstPath, PatchTransaction tx)
+        {
+            string[] lines = File.ReadAllLines(deleteLstPath);
+            foreach (string rawLine in lines)
+            {
+                string rel = rawLine.Trim().Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+                if (string.IsNullOrWhiteSpace(rel)) continue;
+
+                string target;
+                try { target = SafeTarget(AppPaths.BaseDirectory, rel); }
+                catch (Exception ex) { AppLogger.PatchWarn("delete.lst skipped unsafe path '" + rel + "': " + ex.Message); continue; }
+
+                if (!File.Exists(target))
+                {
+                    AppLogger.PatchWarn("delete.lst target not found (skipped): " + rel);
+                    continue;
+                }
+
+                tx.BackupFile(target);
+                File.Delete(target);
+                AppLogger.Patch("Deleted (delete.lst): " + rel);
             }
         }
 
@@ -97,7 +125,7 @@ namespace Shaiya_Duff_Updater
             }
 
             string[] files = Directory.GetFiles(source, "*", SearchOption.AllDirectories)
-                .Where(f => { string n = Path.GetFileName(f); return !n.Equals("update.sah", StringComparison.OrdinalIgnoreCase) && !n.Equals("update.saf", StringComparison.OrdinalIgnoreCase); })
+                .Where(f => { string n = Path.GetFileName(f); return !n.Equals("update.sah", StringComparison.OrdinalIgnoreCase) && !n.Equals("update.saf", StringComparison.OrdinalIgnoreCase) && !n.Equals("delete.lst", StringComparison.OrdinalIgnoreCase); })
                 .ToArray();
             int total = files.Length;
             int done  = 0;

@@ -1,0 +1,54 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- GroupBox headers -->
+    <sys:String x:Key="GbSsh">CONNESSIONE SSH</sys:String>
+    <sys:String x:Key="GbWorkspace">WORKSPACE</sys:String>
+    <sys:String x:Key="GbPatch">CREA PATCH</sys:String>
+    <sys:String x:Key="GbSettings">IMPOSTAZIONI</sys:String>
+    <sys:String x:Key="GbLog">LOG</sys:String>
+
+    <!-- Labels -->
+    <sys:String x:Key="LblHost">Host:</sys:String>
+    <sys:String x:Key="LblUser">Utente:</sys:String>
+    <sys:String x:Key="LblPass">Password:</sys:String>
+    <sys:String x:Key="LblFolder">Cartella:</sys:String>
+    <sys:String x:Key="LblDesc">Descrizione:</sys:String>
+    <sys:String x:Key="LblNum">Numero:</sys:String>
+    <sys:String x:Key="LblPatchesPath">Patches Path:</sys:String>
+    <sys:String x:Key="LblHtdocsPath">Htdocs Path:</sys:String>
+    <sys:String x:Key="LblSahKey">SahKeyHex:</sys:String>
+    <sys:String x:Key="LblLastPatch">Ultima patch: </sys:String>
+
+    <!-- Buttons -->
+    <sys:String x:Key="BtnTest">Test</sys:String>
+    <sys:String x:Key="BtnConnectStr">Connetti</sys:String>
+    <sys:String x:Key="BtnBrowse">Sfoglia...</sys:String>
+    <sys:String x:Key="BtnCreateStruct">Crea struttura</sys:String>
+    <sys:String x:Key="BtnOpen">Apri</sys:String>
+    <sys:String x:Key="BtnBuildStr">▶  Genera Patch</sys:String>
+    <sys:String x:Key="BtnUploadStr">↑  Carica sul Server</sys:String>
+    <sys:String x:Key="BtnReadKey">Leggi da GMSecurity.ini...</sys:String>
+    <sys:String x:Key="BtnSaveSettings">Salva impostazioni</sys:String>
+    <sys:String x:Key="BtnClearLog">Pulisci log</sys:String>
+
+    <!-- CheckBox -->
+    <sys:String x:Key="ChkDeleteLstContent">Includi delete.lst  (solo file sciolti nel client — NON file dentro data.sah/saf)</sys:String>
+
+    <!-- Hints -->
+    <sys:String x:Key="HintWorkspace">Metti i file in workspace\data\ seguendo la struttura SAH  ·  Es: data\Assets\General\Roulette.png  |  data\Item\Item.SData</sys:String>
+    <sys:String x:Key="HintDeleteLst">Percorsi relativi alla cartella client, uno per riga.  Es: filter.txt    Item\Item.SData    interface\sonovlogo.bmp</sys:String>
+
+    <!-- Tooltips -->
+    <sys:String x:Key="TipPatchDesc">Testo breve, es: roulette_update. Usato nel nome file.</sys:String>
+    <sys:String x:Key="TipPatchNum">auto = rileva dal server SSH. Oppure inserisci un numero fisso es: 4</sys:String>
+    <sys:String x:Key="TipSahKey">Chiave AES-256 da GMSecurity.ini (64 caratteri hex). Se SSH connesso, legge dal server automaticamente.</sys:String>
+    <sys:String x:Key="TipReadKey">Se connesso SSH: legge dal server (C:/ShaiyaServer/PSM_Client/Bin/Data/GMSecurity.ini). Altrimenti: apre file locale.</sys:String>
+    <sys:String x:Key="TipPatchesPath">Path SFTP dove caricare i file .patch sul server</sys:String>
+    <sys:String x:Key="TipHtdocsPath">Path SFTP della root web (dove si trova manifest.json)</sys:String>
+
+    <!-- Header -->
+    <sys:String x:Key="AppSubtitle">Shaiya Patch Tool</sys:String>
+
+</ResourceDictionary>

@@ -44,3 +44,6 @@ ServerSide/Updater/Files/*
 # OS files
 .DS_Store
 Thumbs.db
+
+# NuGet packages (restore via NuGet)
+packages/

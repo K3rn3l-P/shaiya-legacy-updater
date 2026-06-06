@@ -1,13 +1,19 @@
 <?php
-require_once __DIR__ . '/common.php';
+// Uses main website's db infrastructure (has PS_WebSite access)
+$mainHtdocs = dirname(__DIR__, 2);
+require_once $mainHtdocs . '/security_bootstrap.php';
+appApplySecurityHeaders();
+require_once $mainHtdocs . '/db_pdo.php';
 
-$retryAfter = 0;
-if (!updater_ratelimit_allow('news_api:' . client_ip(), 30, 60, $retryAfter)) {
-    header('Retry-After: ' . $retryAfter);
-    respond(['ok' => false, 'message' => 'Rate limit exceeded.'], 429);
+header('Content-Type: application/json; charset=UTF-8');
+
+if (!appRateLimitAllow('updater_news:' . appGetClientIp(), 30, 60)) {
+    http_response_code(429);
+    echo json_encode(['ok' => false, 'message' => 'Rate limit exceeded.']);
+    exit;
 }
 
-function strip_preview(string $html, int $max = 220): string {
+function strip_preview_news(string $html, int $max = 220): string {
     $plain = strip_tags($html);
     $plain = preg_replace('/\s+/', ' ', $plain);
     $plain = html_entity_decode(trim($plain), ENT_QUOTES | ENT_HTML5, 'UTF-8');
@@ -17,29 +23,29 @@ function strip_preview(string $html, int $max = 220): string {
     return $plain;
 }
 
-$stmt = db_query(
-    "SELECT TOP 10 NewsID, Title, Content, Author, CreatedAt
-     FROM PS_WebSite.dbo.Web_News WITH (NOLOCK)
-     WHERE IsHidden = 0
-     ORDER BY CreatedAt DESC"
-);
+try {
+    $stmt = $pdoAdmin->query(
+        "SELECT TOP 10 NewsID, Title, Content, Author, CreatedAt
+         FROM PS_WebSite.dbo.Web_News
+         WHERE IsHidden = 0
+         ORDER BY CreatedAt DESC"
+    );
+    $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'message' => 'Database error.']);
+    exit;
+}
 
 $news = [];
-while (($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) !== null) {
-    if ($row === false) continue;
-    $createdAt = $row['CreatedAt'];
-    if ($createdAt instanceof DateTime) {
-        $dateStr = $createdAt->format('F j, Y');
-    } else {
-        $dateStr = date('F j, Y', strtotime((string)$createdAt));
-    }
+foreach ($rows as $row) {
     $news[] = [
         'id'      => (int)$row['NewsID'],
         'title'   => (string)$row['Title'],
-        'preview' => strip_preview((string)($row['Content'] ?? '')),
+        'preview' => strip_preview_news((string)($row['Content'] ?? '')),
         'author'  => (string)$row['Author'],
-        'date'    => $dateStr,
+        'date'    => date('F j, Y', strtotime($row['CreatedAt'])),
     ];
 }
 
-respond(['ok' => true, 'news' => $news]);
+echo json_encode(['ok' => true, 'news' => $news], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

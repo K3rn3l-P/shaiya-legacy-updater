@@ -251,6 +251,7 @@ namespace Shaiya_Duff_Updater
       ClientWriter.BaseStream.Position = ClientWriter.BaseStream.Length;
       ClientWriter.Write(buffer);
       CurrentFolder.Files.Add(file);
+      AppLogger.Patch("InsertFile: " + f.FileName + " start=" + file.Start + " len=" + file.Length);
     }
 
     private void UpdateFile(
@@ -261,11 +262,13 @@ namespace Shaiya_Duff_Updater
     {
       PatchReader.BaseStream.Position = (long) new_f.Start;
       byte[] buffer = PatchReader.ReadBytes((int) new_f.Length);
+      ulong oldStart = f.Start;
+      uint oldLength = f.Length;
       ClientWriter.BaseStream.Position = f.Length < new_f.Length ? ClientWriter.BaseStream.Length : (long) f.Start;
       f.Start = (ulong) ClientWriter.BaseStream.Position;
       f.Length = new_f.Length;
-      ++f.Version;
       ClientWriter.Write(buffer);
+      AppLogger.Patch("UpdateFile: " + f.FileName + " oldStart=" + oldStart + " oldLen=" + oldLength + " newStart=" + f.Start + " newLen=" + f.Length + " ver=" + f.Version);
     }
 
     private void MergeFolder(
