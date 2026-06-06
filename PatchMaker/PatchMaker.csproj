@@ -33,7 +33,8 @@
   <ItemGroup>
     <!-- SSH.NET 2020.0.1 — net40 build, nessuna dipendenza esterna -->
     <Reference Include="Renci.SshNet">
-      <HintPath>..\packages\SSH.NET.2020.0.1\lib\net40\Renci.SshNet.dll</HintPath>
+      <HintPath>lib\Renci.SshNet.dll</HintPath>
+      <Private>true</Private>
     </Reference>
     <!-- Ionic.Zip shared from Updater project -->
     <Reference Include="Ionic.Zip">
@@ -94,8 +95,8 @@
 
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
-    <PropertyGroup><ErrorText>SSH.NET 2020.0.1 non trovato. Verifica: packages\SSH.NET.2020.0.1\lib\net40\Renci.SshNet.dll</ErrorText></PropertyGroup>
-    <Error Condition="!Exists('..\packages\SSH.NET.2020.0.1\lib\net40\Renci.SshNet.dll')"
+    <PropertyGroup><ErrorText>SSH.NET DLL non trovata. Verifica: PatchMaker\lib\Renci.SshNet.dll</ErrorText></PropertyGroup>
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)lib\Renci.SshNet.dll')"
            Text="$(ErrorText)" />
   </Target>
 </Project>
