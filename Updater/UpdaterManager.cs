@@ -111,6 +111,7 @@ namespace Shaiya_Duff_Updater
                         if (!string.IsNullOrEmpty(response.sahKey))
                             AppConfig.SahCryptKeyHex = response.sahKey;
                         MainWindow.MW.LoadAnimation.Visibility = Visibility.Hidden;
+                        Updater.Continue();
 
                         if (saveAccount && !string.IsNullOrEmpty(MainWindow.MW.UserID))
                         {

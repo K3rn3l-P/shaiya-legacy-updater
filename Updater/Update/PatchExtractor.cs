@@ -8,6 +8,11 @@ namespace Shaiya_Duff_Updater
     {
         public static void ExtractZipSafe(string zipPath, string destination)
         {
+            ExtractZipSafe(zipPath, destination, null);
+        }
+
+        public static void ExtractZipSafe(string zipPath, string destination, Action<int> progress)
+        {
             Directory.CreateDirectory(destination);
             string root = Path.GetFullPath(destination);
             if (!root.EndsWith(Path.DirectorySeparatorChar.ToString())) root += Path.DirectorySeparatorChar;
@@ -26,9 +31,14 @@ namespace Shaiya_Duff_Updater
                         throw new InvalidDataException("Unsafe patch entry path: " + entry.FileName);
                 }
 
+                int total = zip.Count;
+                int done  = 0;
                 foreach (ZipEntry entry in zip)
                 {
                     entry.Extract(destination, ExtractExistingFileAction.OverwriteSilently);
+                    done++;
+                    if (progress != null && total > 0)
+                        progress(done * 100 / total);
                 }
             }
         }

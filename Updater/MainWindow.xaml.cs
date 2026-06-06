@@ -39,7 +39,7 @@ namespace Shaiya_Duff_Updater
             MW = this;
             LinkWebsite.Link = AppConfig.WebsiteUrl;
             LinkRegister.Link = AppConfig.RegisterUrl;
-            Updater.Continue();
+            // Patching starts only after login (so SahCrypt key from login response is available).
 
             LinkAnotherAccount = new iMenuItem
             {
@@ -81,7 +81,6 @@ namespace Shaiya_Duff_Updater
             sb.Children.Add(a);
             sb.Begin();
             LinkLogIn.IsSelected = false;
-            LinkLatestNews.IsSelected = true;
             SetActiveTab(_activeTab);
         }
 
@@ -102,6 +101,23 @@ namespace Shaiya_Duff_Updater
             if (tab == "News"    && !_newsLoaded)    LoadNews();
             if (tab == "Ranking" && !_rankingLoaded) LoadRankings();
             if (tab == "Bosses"  && !_bossesLoaded)  LoadBosses();
+        }
+
+        private void BtnRefreshTab_MouseEnter(object sender, MouseEventArgs e)
+        {
+            BtnRefreshTab.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E8C881"));
+        }
+
+        private void BtnRefreshTab_MouseLeave(object sender, MouseEventArgs e)
+        {
+            BtnRefreshTab.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4DE8C881"));
+        }
+
+        private void BtnRefreshTab_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (_activeTab == "News")    { _newsLoaded    = false; LoadNews();     }
+            else if (_activeTab == "Ranking") { _rankingLoaded = false; LoadRankings(); }
+            else if (_activeTab == "Bosses")  { _bossesLoaded  = false; LoadBosses();   }
         }
 
         private static void SetTabStyle(Border btn, TextBlock txt, bool active)
@@ -468,7 +484,6 @@ namespace Shaiya_Duff_Updater
             sb.Children.Add(a);
             sb.Begin();
             LinkLogIn.IsSelected = true;
-            LinkLatestNews.IsSelected = false;
         }
 
         public void RefreshExistingAccounts()
@@ -990,10 +1005,10 @@ namespace Shaiya_Duff_Updater
         private void ShowGameLaunchPanel(string title, string subtitle)
         {
             LinkWebsite.IsEnabled = false;
-            LinkLatestNews.IsEnabled = false;
             LinkRepair.IsEnabled = false;
             LinkLogIn.IsEnabled = false;
             LinkRegister.IsEnabled = false;
+            BtnRefreshTab.IsEnabled = false;
             GameStartButton.Visibility = Visibility.Hidden;
             GameLaunchPanel.Visibility = Visibility.Visible;
             SetGameLaunchStatusOnUi(title, subtitle);
@@ -1044,10 +1059,10 @@ namespace Shaiya_Duff_Updater
                     MW._launchingGame = false;
                     MW.GameLaunchPanel.Visibility = Visibility.Collapsed;
                     MW.LinkWebsite.IsEnabled = true;
-                    MW.LinkLatestNews.IsEnabled = true;
                     MW.LinkRepair.IsEnabled = true;
                     MW.LinkLogIn.IsEnabled = true;
                     MW.LinkRegister.IsEnabled = true;
+                    MW.BtnRefreshTab.IsEnabled = true;
                     MW.CanStartGame();
                 }));
             }
@@ -1098,6 +1113,332 @@ namespace Shaiya_Duff_Updater
             AppLogger.Debug("integrity", dllName + " check=" + (ok ? "OK" : "FAIL") + " expected=" + entry.sha256 + " actual=" + actual);
             if (!ok) AppLogger.Warn(dllName + " hash mismatch — client files corrotti.");
             return ok;
+        }
+
+        // ─── SETTINGS PANEL ──────────────────────────────────────────────────────
+
+        private sealed class ConfigSetting
+        {
+            public string Section;
+            public string Key;
+            public Func<string> GetValue;
+        }
+
+        private readonly List<ConfigSetting> _configSettings = new List<ConfigSetting>();
+        private bool _settingsBuilt;
+        private string _setActiveTab = "Video";
+
+        private static readonly SolidColorBrush _setActiveBg      = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DE8C881"));
+        private static readonly SolidColorBrush _setActiveBorder   = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4DE8C881"));
+        private static readonly SolidColorBrush _setActiveFg      = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E8C881"));
+        private static readonly SolidColorBrush _setInactiveBg    = new SolidColorBrush(Colors.Transparent);
+        private static readonly SolidColorBrush _setInactiveBorder = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1AE8C881"));
+        private static readonly SolidColorBrush _setInactiveFg    = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#7BE8C881"));
+        private static readonly SolidColorBrush _setLabelFg       = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#B0E0E0E0"));
+        private static readonly SolidColorBrush _setSecFg         = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#7BE8C881"));
+        private static readonly SolidColorBrush _setDivFill       = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2DE8C881"));
+        private static readonly FontFamily _setFontInter  = new FontFamily("pack://application:,,,/resources/fonts/#Inter");
+        private static readonly FontFamily _setFontCinzel = new FontFamily("pack://application:,,,/resources/fonts/#Cinzel");
+
+        private void BtnOpenSettings_MouseEnter(object sender, MouseEventArgs e) { ((TextBlock)sender).Foreground = _setActiveFg; }
+        private void BtnOpenSettings_MouseLeave(object sender, MouseEventArgs e) { ((TextBlock)sender).Foreground = _setInactiveFg; }
+        private void BtnSettingsClose_MouseEnter(object sender, MouseEventArgs e) { ((TextBlock)sender).Foreground = _setActiveFg; }
+        private void BtnSettingsClose_MouseLeave(object sender, MouseEventArgs e) { ((TextBlock)sender).Foreground = _setInactiveFg; }
+        private void BtnSettingsSave_MouseEnter(object sender, MouseEventArgs e) { ((Border)sender).Background = _setActiveBg; }
+        private void BtnSettingsSave_MouseLeave(object sender, MouseEventArgs e) { ((Border)sender).Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1AE8C881")); }
+
+        private void BtnOpenSettings_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (!_settingsBuilt) { BuildSettingsContent(); _settingsBuilt = true; }
+            SettingsOverlay.Visibility = Visibility.Visible;
+            ApplySetTab(_setActiveTab);
+        }
+
+        private void BtnSettingsOverlay_Close(object sender, MouseButtonEventArgs e)
+        {
+            SettingsOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private void SetTab_Click(object sender, MouseButtonEventArgs e)
+        {
+            ApplySetTab((string)((FrameworkElement)sender).Tag);
+        }
+
+        private void ApplySetTab(string tab)
+        {
+            _setActiveTab = tab;
+            StyleSetTab(SetTabVideo,     SetTabVideoTxt,     tab == "Video");
+            StyleSetTab(SetTabSound,     SetTabSoundTxt,     tab == "Sound");
+            StyleSetTab(SetTabAdvanced,  SetTabAdvancedTxt,  tab == "Advanced");
+            StyleSetTab(SetTabInterface, SetTabInterfaceTxt, tab == "Interface");
+            SetScrollVideo.Visibility     = tab == "Video"     ? Visibility.Visible : Visibility.Collapsed;
+            SetScrollSound.Visibility     = tab == "Sound"     ? Visibility.Visible : Visibility.Collapsed;
+            SetScrollAdvanced.Visibility  = tab == "Advanced"  ? Visibility.Visible : Visibility.Collapsed;
+            SetScrollInterface.Visibility = tab == "Interface" ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static void StyleSetTab(Border btn, TextBlock txt, bool active)
+        {
+            btn.Background  = active ? _setActiveBg    : _setInactiveBg;
+            btn.BorderBrush = active ? _setActiveBorder : _setInactiveBorder;
+            txt.Foreground  = active ? (Brush)_setActiveFg : (Brush)_setInactiveFg;
+            txt.FontWeight  = active ? FontWeights.SemiBold : FontWeights.Normal;
+        }
+
+        private void BtnSettingsSave_Click(object sender, MouseButtonEventArgs e) { SaveSettings(); }
+
+        private void SaveSettings()
+        {
+            string path = AppPaths.InBase(AppConfig.ClientConfigFile);
+            if (!File.Exists(path)) { MessageDialog.Display("Settings", "CONFIG.INI not found at:\n" + path); return; }
+            try
+            {
+                var changes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var s in _configSettings) changes[s.Section + "::" + s.Key] = s.GetValue();
+                ConfigIniSaver.Save(path, changes);
+                SettingsOverlay.Visibility = Visibility.Collapsed;
+            }
+            catch (Exception ex) { MessageDialog.Display("Settings Error", "Could not save CONFIG.INI:\n" + ex.Message); }
+        }
+
+        private void BuildSettingsContent()
+        {
+            string path = AppPaths.InBase(AppConfig.ClientConfigFile);
+            IniFile ini = IniFile.Load(path);
+
+            // ── VIDEO ────────────────────────────────────────────────────────
+            string sizeX = ini.Get("VIDEO", "SIZE_X", "1920");
+            string sizeY = ini.Get("VIDEO", "SIZE_Y", "1080");
+            string resKey = sizeX + "x" + sizeY;
+
+            string[] resOpts   = { "1280x720", "1366x768", "1600x900", "1920x1080", "2560x1440", "3840x2160" };
+            string[] resLabels = { "1280 × 720", "1366 × 768", "1600 × 900", "1920 × 1080", "2560 × 1440", "3840 × 2160" };
+            bool resFound = false;
+            foreach (string r in resOpts) if (string.Equals(r, resKey, StringComparison.OrdinalIgnoreCase)) { resFound = true; break; }
+            if (!resFound) resKey = "1920x1080";
+
+            string[] resRef;
+            StackPanel resWidget = MakeChoiceWidget(resOpts, resLabels, resKey, out resRef);
+            _configSettings.Add(new ConfigSetting { Section = "VIDEO", Key = "SIZE_X", GetValue = () => resRef[0].Split('x')[0] });
+            _configSettings.Add(new ConfigSetting { Section = "VIDEO", Key = "SIZE_Y", GetValue = () => resRef[0].Split('x')[1] });
+
+            SetPanelVideo.Children.Add(SetSectionHeader("Display"));
+            SetPanelVideo.Children.Add(SetRow("Resolution", resWidget));
+            SetPanelVideo.Children.Add(SetToggleRow("Fullscreen",      ini.GetBool("VIDEO","FULLSCREEN",  false), "VIDEO","FULLSCREEN"));
+
+            SetPanelVideo.Children.Add(SetSectionHeader("Graphics"));
+            SetPanelVideo.Children.Add(SetChoiceRow("Texture Quality", new[]{"LOW","MEDIUM","HIGH"}, null,       ini.Get("VIDEO","TEXTURE","HIGH"),              "VIDEO","TEXTURE"));
+            SetPanelVideo.Children.Add(SetChoiceRow("View Range",      new[]{"LOW","MEDIUM","HIGH"}, null,       ini.Get("VIDEO","RANGE","HIGH"),                "VIDEO","RANGE"));
+            SetPanelVideo.Children.Add(SetChoiceRow("Glow Level",      new[]{"0","1","2","3"},       null,       ini.GetInt("VIDEO","GLOW_LEVEL",2).ToString(),  "VIDEO","GLOW_LEVEL"));
+            SetPanelVideo.Children.Add(SetChoiceRow("Gamma",           new[]{"1","2","3","4","5"},   null,       ini.GetInt("VIDEO","GAMMA",4).ToString(),       "VIDEO","GAMMA"));
+
+            SetPanelVideo.Children.Add(SetSectionHeader("Visual"));
+            SetPanelVideo.Children.Add(SetToggleRow("Water Effects",  ini.GetBool("VIDEO","WATER",     true),  "VIDEO","WATER"));
+            SetPanelVideo.Children.Add(SetToggleRow("Shadow",         ini.GetBool("VIDEO","SHADOW",    true),  "VIDEO","SHADOW"));
+            SetPanelVideo.Children.Add(SetToggleRow("Show Helmet",    ini.GetBool("VIDEO","HELMET",    true),  "VIDEO","HELMET"));
+            SetPanelVideo.Children.Add(SetToggleRow("Show Cloak",     ini.GetBool("VIDEO","CLOAK",     true),  "VIDEO","CLOAK"));
+            SetPanelVideo.Children.Add(SetToggleRow("Weapon Effects", ini.GetBool("VIDEO","WEAPONEFF", true),  "VIDEO","WEAPONEFF"));
+
+            // ── SOUND ────────────────────────────────────────────────────────
+            SetPanelSound.Children.Add(SetSectionHeader("Volume"));
+            SetPanelSound.Children.Add(SetChoiceRow("BGM",           new[]{"0","1","2","3","4","5"}, null, ini.GetInt("SOUND","VOL_BGM",2).ToString(),    "SOUND","VOL_BGM"));
+            SetPanelSound.Children.Add(SetChoiceRow("Sound Effects", new[]{"0","1","2","3","4","5"}, null, ini.GetInt("SOUND","VOL_EFFECT",2).ToString(), "SOUND","VOL_EFFECT"));
+            SetPanelSound.Children.Add(SetChoiceRow("World",         new[]{"0","1","2","3","4","5"}, null, ini.GetInt("SOUND","VOL_WORLD",2).ToString(),  "SOUND","VOL_WORLD"));
+
+            SetPanelSound.Children.Add(SetSectionHeader("Voice"));
+            SetPanelSound.Children.Add(SetToggleRow("Character Voices", ini.GetBool("SOUND","VOICE_CHAR",    true), "SOUND","VOICE_CHAR"));
+            SetPanelSound.Children.Add(SetToggleRow("NPC Voices",       ini.GetBool("SOUND","VOICE_NPC",     true), "SOUND","VOICE_NPC"));
+            SetPanelSound.Children.Add(SetToggleRow("Danger Alert",     ini.GetBool("SOUND","DANGER_DETECT", true), "SOUND","DANGER_DETECT"));
+
+            // ── ADVANCED ─────────────────────────────────────────────────────
+            SetPanelAdvanced.Children.Add(SetSectionHeader("Visual Enhancements"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Show Pets",        ini.GetBool("ADVANCED","PETS",      true), "ADVANCED","PETS"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Show Wings",       ini.GetBool("ADVANCED","WINGS",     true), "ADVANCED","WINGS"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Show Costumes",    ini.GetBool("ADVANCED","COSTUMES",  true), "ADVANCED","COSTUMES"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Visual Effects",   ini.GetBool("ADVANCED","EFFECTS",   true), "ADVANCED","EFFECTS"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("FPS Boost",        ini.GetBool("ADVANCED","FPS_BOOST", true), "ADVANCED","FPS_BOOST"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Character Titles", ini.GetBool("ADVANCED","TITLES",    true), "ADVANCED","TITLES"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Colour Effects",   ini.GetBool("ADVANCED","COLOUR",    true), "ADVANCED","COLOUR"));
+
+            SetPanelAdvanced.Children.Add(SetSectionHeader("Font"));
+            SetPanelAdvanced.Children.Add(SetChoiceRow("Size",
+                new[]{"-8","-10","-11","-12","-14","-16"},
+                new[]{"8pt","10pt","11pt","12pt","14pt","16pt"},
+                ini.Get("FONT","HEIGHT","-12"), "FONT","HEIGHT"));
+            SetPanelAdvanced.Children.Add(SetChoiceRow("Weight",
+                new[]{"400","700"}, new[]{"Normal","Bold"},
+                ini.Get("FONT","WEIGHT","400"), "FONT","WEIGHT"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Italic",
+                ini.GetBool("FONT","ITALIC", false), "FONT","ITALIC", numericBool: true));
+            SetPanelAdvanced.Children.Add(SetChoiceRow("Face",
+                new[]{"Tahoma","Arial","Verdana","Calibri"}, null,
+                ini.Get("FONT","FACENAME","Tahoma"), "FONT","FACENAME"));
+
+            SetPanelAdvanced.Children.Add(SetSectionHeader("Game"));
+            SetPanelAdvanced.Children.Add(SetChoiceRow("UI Mode", new[]{"EP4","EP6","EP8"}, null, ini.Get("ADVANCED","UI","EP4"), "ADVANCED","UI"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Auto-claim Rewards",       ini.GetBool("IMGUI","REWARD_AUTOCLAIM",       false), "IMGUI","REWARD_AUTOCLAIM"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Skill Bar Lock",           ini.GetBool("VIDEO","SKILLWNDLOCK",           false), "VIDEO","SKILLWNDLOCK"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Allow Multiple Instances", ini.GetBool("APPLICATION","ALLOW_MULTIPROCESS", true), "APPLICATION","ALLOW_MULTIPROCESS"));
+
+            SetPanelAdvanced.Children.Add(SetSectionHeader("Union Party"));
+            SetPanelAdvanced.Children.Add(SetToggleRow("Show Union Window",
+                ini.GetBool("UNIONPARTY","UNION_WINODW_VISIBLE", true), "UNIONPARTY","UNION_WINODW_VISIBLE"));
+            SetPanelAdvanced.Children.Add(SetChoiceRow("Window Opacity",
+                new[]{"25","50","73","100","150","200","255"},
+                new[]{"10%","20%","29%","39%","59%","78%","100%"},
+                ini.GetInt("UNIONPARTY","ALPAH_VALUE", 73).ToString(), "UNIONPARTY","ALPAH_VALUE"));
+
+            SetPanelAdvanced.Children.Add(SetSectionHeader("Launcher"));
+            string skipRaw = ini.Get("ADVANCED", "SKIPSERVERSELECTION", "0");
+            bool skipVal = skipRaw == "1" || string.Equals(skipRaw, "TRUE", StringComparison.OrdinalIgnoreCase);
+            SetPanelAdvanced.Children.Add(SetToggleRow("Skip Server Selection", skipVal, "ADVANCED","SKIPSERVERSELECTION", numericBool: true));
+
+            // ── INTERFACE ([USER] section) ────────────────────────────────────
+            SetPanelInterface.Children.Add(SetSectionHeader("Display"));
+            SetPanelInterface.Children.Add(SetToggleRow("Show My Name",       ini.GetBool("USER","MY_NAME",       true),  "USER","MY_NAME"));
+            SetPanelInterface.Children.Add(SetToggleRow("Show Player Names",  ini.GetBool("USER","USER_NAME",     true),  "USER","USER_NAME"));
+            SetPanelInterface.Children.Add(SetToggleRow("Show Monster Names", ini.GetBool("USER","MONSTER_NAME",  true),  "USER","MONSTER_NAME"));
+            SetPanelInterface.Children.Add(SetToggleRow("Show Interface",     ini.GetBool("USER","SHOW_INTERFACE",true),  "USER","SHOW_INTERFACE"));
+            SetPanelInterface.Children.Add(SetToggleRow("Chat Bubbles",       ini.GetBool("USER","TALK_BALLOON",  true),  "USER","TALK_BALLOON"));
+            SetPanelInterface.Children.Add(SetToggleRow("Hide Damage Numbers",ini.GetBool("USER","HIDE_DAMAGE",   false), "USER","HIDE_DAMAGE"));
+
+            SetPanelInterface.Children.Add(SetSectionHeader("Mouse"));
+            SetPanelInterface.Children.Add(SetToggleRow("Use Mouse",              ini.GetBool("USER","USE_MOUSE",        true),  "USER","USE_MOUSE"));
+            SetPanelInterface.Children.Add(SetToggleRow("Inventory Mouse",        ini.GetBool("USER","INV_MOUSE",        false), "USER","INV_MOUSE"));
+            SetPanelInterface.Children.Add(SetToggleRow("Invert Scroll Direction", ini.GetBool("USER","INV_MOUSE_UPDOWN", false), "USER","INV_MOUSE_UPDOWN"));
+            SetPanelInterface.Children.Add(SetChoiceRow("Mouse Sensitivity", new[]{"1","2","3","4","5"}, null,
+                ini.GetInt("USER","MOUSE_SENSITIVITY",3).ToString(), "USER","MOUSE_SENSITIVITY"));
+
+            SetPanelInterface.Children.Add(SetSectionHeader("Gameplay"));
+            SetPanelInterface.Children.Add(SetToggleRow("Screen Swing",    ini.GetBool("USER","SCREEN_SWING", true),  "USER","SCREEN_SWING"));
+            SetPanelInterface.Children.Add(SetToggleRow("Water Effects",   ini.GetBool("USER","WATER",        true),  "USER","WATER"));
+            SetPanelInterface.Children.Add(SetToggleRow("Shadow",          ini.GetBool("USER","SHADOW",       false), "USER","SHADOW"));
+            SetPanelInterface.Children.Add(SetToggleRow("Use Filter",      ini.GetBool("USER","USE_FILTER",   true),  "USER","USE_FILTER"));
+            SetPanelInterface.Children.Add(SetToggleRow("Warning Messages",ini.GetBool("USER","WARNING_MSG",  true),  "USER","WARNING_MSG"));
+            SetPanelInterface.Children.Add(SetToggleRow("Reopen UI",       ini.GetBool("USER","UI_REOPEN",    true),  "USER","UI_REOPEN"));
+
+            SetPanelInterface.Children.Add(SetSectionHeader("Social"));
+            SetPanelInterface.Children.Add(SetToggleRow("Reject Duel Requests",  ini.GetBool("USER","REJECT_FIGHT", false), "USER","REJECT_FIGHT"));
+            SetPanelInterface.Children.Add(SetToggleRow("Reject Party Requests", ini.GetBool("USER","REJECT_PARTY", false), "USER","REJECT_PARTY"));
+            SetPanelInterface.Children.Add(SetToggleRow("Reject Trade Requests", ini.GetBool("USER","REJECT_TRADE", false), "USER","REJECT_TRADE"));
+        }
+
+        private FrameworkElement SetSectionHeader(string title)
+        {
+            var sp = new StackPanel { Margin = new Thickness(0, 10, 0, 4) };
+            sp.Children.Add(new TextBlock
+            {
+                Text = title.ToUpperInvariant(),
+                Foreground = _setSecFg,
+                FontFamily = _setFontCinzel,
+                FontSize = 9,
+                FontWeight = FontWeights.SemiBold
+            });
+            sp.Children.Add(new System.Windows.Shapes.Rectangle
+            {
+                Height = 1,
+                Margin = new Thickness(0, 4, 0, 0),
+                Fill = _setDivFill
+            });
+            return sp;
+        }
+
+        private static FrameworkElement SetRow(string label, UIElement control)
+        {
+            var g = new Grid { Margin = new Thickness(0, 0, 0, 7) };
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var lbl = new TextBlock
+            {
+                Text = label,
+                Foreground = _setLabelFg,
+                FontFamily = _setFontInter,
+                FontSize = 12,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(lbl, 0);
+            Grid.SetColumn(control, 1);
+            g.Children.Add(lbl);
+            g.Children.Add(control);
+            return g;
+        }
+
+        private FrameworkElement SetToggleRow(string label, bool value, string section, string key, bool numericBool = false)
+        {
+            var cb = new CheckBox { IsChecked = value, VerticalAlignment = VerticalAlignment.Center };
+            _configSettings.Add(new ConfigSetting
+            {
+                Section = section,
+                Key = key,
+                GetValue = () => numericBool
+                    ? (cb.IsChecked == true ? "1" : "0")
+                    : (cb.IsChecked == true ? "TRUE" : "FALSE")
+            });
+            return SetRow(label, cb);
+        }
+
+        private FrameworkElement SetChoiceRow(string label, string[] opts, string[] labels, string current, string section, string key)
+        {
+            string[] valRef;
+            StackPanel widget = MakeChoiceWidget(opts, labels, current, out valRef);
+            _configSettings.Add(new ConfigSetting { Section = section, Key = key, GetValue = () => valRef[0] });
+            return SetRow(label, widget);
+        }
+
+        private static StackPanel MakeChoiceWidget(string[] opts, string[] labels, string current, out string[] valRef)
+        {
+            string[] vr = { current };
+            valRef = vr;
+
+            var btnArr = new Border[opts.Length];
+            var txtArr = new TextBlock[opts.Length];
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+
+            for (int i = 0; i < opts.Length; i++)
+            {
+                bool sel = string.Equals(opts[i], current, StringComparison.OrdinalIgnoreCase);
+                var b = new Border
+                {
+                    CornerRadius = new CornerRadius(3),
+                    Margin = new Thickness(i == 0 ? 0 : 3, 0, 0, 0),
+                    Padding = new Thickness(9, 3, 9, 3),
+                    Background  = sel ? _setActiveBg    : _setInactiveBg,
+                    BorderBrush = sel ? _setActiveBorder : _setInactiveBorder,
+                    BorderThickness = new Thickness(1),
+                    Cursor = Cursors.Hand
+                };
+                var t = new TextBlock
+                {
+                    Text = labels != null ? labels[i] : opts[i],
+                    FontFamily = _setFontInter,
+                    FontSize = 10,
+                    Foreground = sel ? (Brush)_setActiveFg : (Brush)_setInactiveFg,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                b.Child = t;
+                btnArr[i] = b;
+                txtArr[i] = t;
+                sp.Children.Add(b);
+            }
+
+            for (int i = 0; i < opts.Length; i++)
+            {
+                int idx = i;
+                string optVal = opts[i];
+                btnArr[i].MouseLeftButtonUp += (s, e) =>
+                {
+                    vr[0] = optVal;
+                    for (int j = 0; j < btnArr.Length; j++)
+                    {
+                        bool active = j == idx;
+                        btnArr[j].Background  = active ? _setActiveBg    : _setInactiveBg;
+                        btnArr[j].BorderBrush = active ? _setActiveBorder : _setInactiveBorder;
+                        txtArr[j].Foreground  = active ? (Brush)_setActiveFg : (Brush)_setInactiveFg;
+                    }
+                };
+            }
+
+            return sp;
         }
     }
 }

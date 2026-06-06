@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 
 namespace Shaiya_Duff_Updater
 {
@@ -7,12 +8,17 @@ namespace Shaiya_Duff_Updater
     {
         public static void ApplyExtractedPatch(string extractedDir, PatchManifestItem item)
         {
+            ApplyExtractedPatch(extractedDir, item, null);
+        }
+
+        public static void ApplyExtractedPatch(string extractedDir, PatchManifestItem item, Action<int> progress)
+        {
             string patchName = item == null ? "manual" : (item.version.ToString("D4") + "_" + Path.GetFileName(item.file ?? "patch"));
             using (PatchTransaction tx = new PatchTransaction(patchName))
             {
                 try
                 {
-                    ApplyExtractedPatchInternal(extractedDir, tx);
+                    ApplyExtractedPatchInternal(extractedDir, tx, progress);
                     tx.Complete();
                 }
                 catch
@@ -25,18 +31,26 @@ namespace Shaiya_Duff_Updater
 
         public static void ApplyExtractedPatch(string extractedDir)
         {
-            ApplyExtractedPatch(extractedDir, null);
+            ApplyExtractedPatch(extractedDir, null, null);
         }
 
-        private static void ApplyExtractedPatchInternal(string extractedDir, PatchTransaction tx)
+        private static void ApplyExtractedPatchInternal(string extractedDir, PatchTransaction tx, Action<int> progress)
         {
             string updateSah = Path.Combine(extractedDir, "update.sah");
             string updateSaf = Path.Combine(extractedDir, "update.saf");
 
-            if (File.Exists(updateSah) && File.Exists(updateSaf))
+            bool hasSah = File.Exists(updateSah) && File.Exists(updateSaf);
+            if (hasSah)
+            {
+                if (progress != null) progress(0);
                 ApplySahPatch(updateSah, updateSaf, tx);
-
-            CopyPatchFiles(extractedDir, AppPaths.BaseDirectory, tx);
+                if (progress != null) progress(50);
+                CopyPatchFiles(extractedDir, AppPaths.BaseDirectory, tx, delegate(int pct) { if (progress != null) progress(50 + pct / 2); });
+            }
+            else
+            {
+                CopyPatchFiles(extractedDir, AppPaths.BaseDirectory, tx, progress);
+            }
         }
 
         private static void ApplySahPatch(string updateSah, string updateSaf, PatchTransaction tx)
@@ -74,7 +88,7 @@ namespace Shaiya_Duff_Updater
             AppLogger.Patch("SAH patch completed. data.sah state=" + SahCrypt.GetState(dataSah));
         }
 
-        private static void CopyPatchFiles(string source, string destination, PatchTransaction tx)
+        private static void CopyPatchFiles(string source, string destination, PatchTransaction tx, Action<int> progress)
         {
             foreach (string dir in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
             {
@@ -82,16 +96,22 @@ namespace Shaiya_Duff_Updater
                 Directory.CreateDirectory(SafeTarget(destination, rel));
             }
 
-            foreach (string file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            string[] files = Directory.GetFiles(source, "*", SearchOption.AllDirectories)
+                .Where(f => { string n = Path.GetFileName(f); return !n.Equals("update.sah", StringComparison.OrdinalIgnoreCase) && !n.Equals("update.saf", StringComparison.OrdinalIgnoreCase); })
+                .ToArray();
+            int total = files.Length;
+            int done  = 0;
+            foreach (string file in files)
             {
-                string name = Path.GetFileName(file);
-                if (name.Equals("update.sah", StringComparison.OrdinalIgnoreCase) || name.Equals("update.saf", StringComparison.OrdinalIgnoreCase)) continue;
-                string rel = GetRelativePath(source, file);
+                string rel    = GetRelativePath(source, file);
                 string target = SafeTarget(destination, rel);
                 tx.BackupFile(target);
                 Directory.CreateDirectory(Path.GetDirectoryName(target));
                 File.Copy(file, target, true);
                 AppLogger.Patch("Copied patch file: " + rel);
+                done++;
+                if (progress != null && total > 0)
+                    progress(done * 100 / total);
             }
         }
 

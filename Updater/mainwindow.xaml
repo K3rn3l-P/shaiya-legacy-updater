@@ -32,6 +32,70 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <!-- Settings panel — thin gold scrollbar matching website -->
+    <ControlTemplate x:Key="SetScrollThumb" TargetType="{x:Type Thumb}">
+      <Border x:Name="Bd" CornerRadius="3" Background="#7FE8C881" Margin="1,0"/>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="true">
+          <Setter TargetName="Bd" Property="Background" Value="#E8C881"/>
+        </Trigger>
+        <Trigger Property="IsDragging" Value="true">
+          <Setter TargetName="Bd" Property="Background" Value="#E8C881"/>
+        </Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate>
+    <ControlTemplate x:Key="SetScrollBtn" TargetType="{x:Type RepeatButton}">
+      <Border Background="Transparent" Height="0"/>
+    </ControlTemplate>
+    <Style x:Key="SetScrollBar" TargetType="{x:Type ScrollBar}">
+      <Setter Property="OverridesDefaultStyle" Value="true"/>
+      <Setter Property="Width" Value="6"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type ScrollBar}">
+            <Border CornerRadius="3" Background="#0D070709">
+              <Track x:Name="PART_Track" IsDirectionReversed="true" Margin="0,2">
+                <Track.DecreaseRepeatButton>
+                  <RepeatButton Command="ScrollBar.PageUpCommand"
+                                Template="{StaticResource SetScrollBtn}" Focusable="false"/>
+                </Track.DecreaseRepeatButton>
+                <Track.Thumb>
+                  <Thumb Template="{StaticResource SetScrollThumb}"/>
+                </Track.Thumb>
+                <Track.IncreaseRepeatButton>
+                  <RepeatButton Command="ScrollBar.PageDownCommand"
+                                Template="{StaticResource SetScrollBtn}" Focusable="false"/>
+                </Track.IncreaseRepeatButton>
+              </Track>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="SetScrollViewer" TargetType="{x:Type ScrollViewer}">
+      <Setter Property="OverridesDefaultStyle" Value="true"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type ScrollViewer}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <ScrollContentPresenter Grid.Column="0"/>
+              <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1"
+                         Orientation="Vertical"
+                         Value="{TemplateBinding VerticalOffset}"
+                         Maximum="{TemplateBinding ScrollableHeight}"
+                         ViewportSize="{TemplateBinding ViewportHeight}"
+                         Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                         Style="{StaticResource SetScrollBar}"/>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
     <Style TargetType="{x:Type CheckBox}">
       <Setter Property="UIElement.SnapsToDevicePixels" Value="true"/>
       <Setter Property="FrameworkElement.OverridesDefaultStyle" Value="true"/>
@@ -97,9 +161,6 @@
       <!-- Nav items -->
       <Shaiya_Duff_Updater:iMenuItem x:Name="LinkWebsite" HorizontalAlignment="Left" VerticalAlignment="Center"
                                      Margin="30,0,0,0" Text="Website" Link="http://shaiyaDuff.com/"/>
-      <Shaiya_Duff_Updater:iMenuItem x:Name="LinkLatestNews" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                     Margin="-120,0,0,0" Text="Latest News" IsSelected="false"
-                                     Link="Updater:LatestNews"/>
       <Shaiya_Duff_Updater:iMenuItem x:Name="LinkRepair" HorizontalAlignment="Center" VerticalAlignment="Center"
                                      Margin="150,0,0,0" Text="Repair" IsSelected="false" Link="Updater:Repair"/>
       <Shaiya_Duff_Updater:iMenuItem x:Name="LinkLogIn" HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -129,6 +190,15 @@
       <TextBlock Text="✕" Foreground="#E8C881" FontSize="13" IsHitTestVisible="False"
                  HorizontalAlignment="Right" VerticalAlignment="Center"
                  Margin="0,0,36,0" Panel.ZIndex="1"/>
+
+      <!-- Settings icon -->
+      <TextBlock x:Name="BtnOpenSettings" Text="⚙"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                 FontSize="15" Foreground="#7BE8C881" Cursor="Hand"
+                 MouseEnter="BtnOpenSettings_MouseEnter"
+                 MouseLeave="BtnOpenSettings_MouseLeave"
+                 MouseLeftButtonUp="BtnOpenSettings_Click"
+                 ToolTip="Settings"/>
     </Grid>
 
     <!-- Sliding content panel -->
@@ -147,27 +217,38 @@
 
         <!-- Tab bar -->
         <Border Grid.Row="0" Background="#CC070709" BorderBrush="#2DE8C881" BorderThickness="0,0,0,1">
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-            <Border x:Name="TabBtnNews" CornerRadius="4" Margin="5,0" Padding="20,5"
-                    Background="#2DE8C881" BorderBrush="#4DE8C881" BorderThickness="1"
-                    Cursor="Hand" Tag="News" MouseLeftButtonUp="TabBtn_Click">
-              <TextBlock x:Name="TabTxtNews" Text="News" Foreground="#E8C881"
-                         FontFamily="pack://application:,,,/resources/fonts/#Cinzel"
-                         FontSize="11" FontWeight="SemiBold"/>
-            </Border>
-            <Border x:Name="TabBtnRanking" CornerRadius="4" Margin="5,0" Padding="20,5"
-                    Background="Transparent" BorderBrush="#1AE8C881" BorderThickness="1"
-                    Cursor="Hand" Tag="Ranking" MouseLeftButtonUp="TabBtn_Click">
-              <TextBlock x:Name="TabTxtRanking" Text="Rankings" Foreground="#7BE8C881"
-                         FontFamily="pack://application:,,,/resources/fonts/#Cinzel" FontSize="11"/>
-            </Border>
-            <Border x:Name="TabBtnBosses" CornerRadius="4" Margin="5,0" Padding="20,5"
-                    Background="Transparent" BorderBrush="#1AE8C881" BorderThickness="1"
-                    Cursor="Hand" Tag="Bosses" MouseLeftButtonUp="TabBtn_Click">
-              <TextBlock x:Name="TabTxtBosses" Text="Bosses" Foreground="#7BE8C881"
-                         FontFamily="pack://application:,,,/resources/fonts/#Cinzel" FontSize="11"/>
-            </Border>
-          </StackPanel>
+          <Grid>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <Border x:Name="TabBtnNews" CornerRadius="4" Margin="5,0" Padding="20,5"
+                      Background="#2DE8C881" BorderBrush="#4DE8C881" BorderThickness="1"
+                      Cursor="Hand" Tag="News" MouseLeftButtonUp="TabBtn_Click">
+                <TextBlock x:Name="TabTxtNews" Text="News" Foreground="#E8C881"
+                           FontFamily="pack://application:,,,/resources/fonts/#Cinzel"
+                           FontSize="11" FontWeight="SemiBold"/>
+              </Border>
+              <Border x:Name="TabBtnRanking" CornerRadius="4" Margin="5,0" Padding="20,5"
+                      Background="Transparent" BorderBrush="#1AE8C881" BorderThickness="1"
+                      Cursor="Hand" Tag="Ranking" MouseLeftButtonUp="TabBtn_Click">
+                <TextBlock x:Name="TabTxtRanking" Text="Rankings" Foreground="#7BE8C881"
+                           FontFamily="pack://application:,,,/resources/fonts/#Cinzel" FontSize="11"/>
+              </Border>
+              <Border x:Name="TabBtnBosses" CornerRadius="4" Margin="5,0" Padding="20,5"
+                      Background="Transparent" BorderBrush="#1AE8C881" BorderThickness="1"
+                      Cursor="Hand" Tag="Bosses" MouseLeftButtonUp="TabBtn_Click">
+                <TextBlock x:Name="TabTxtBosses" Text="Bosses" Foreground="#7BE8C881"
+                           FontFamily="pack://application:,,,/resources/fonts/#Cinzel" FontSize="11"/>
+              </Border>
+            </StackPanel>
+            <!-- Refresh icon -->
+            <TextBlock x:Name="BtnRefreshTab" Text="↺"
+                       HorizontalAlignment="Right" VerticalAlignment="Center"
+                       Margin="0,0,14,0" FontSize="18" Cursor="Hand"
+                       Foreground="#4DE8C881"
+                       MouseEnter="BtnRefreshTab_MouseEnter"
+                       MouseLeave="BtnRefreshTab_MouseLeave"
+                       MouseLeftButtonUp="BtnRefreshTab_Click"
+                       ToolTip="Reload"/>
+          </Grid>
         </Border>
 
         <!-- Content panels -->
@@ -285,7 +366,7 @@
 
     <!-- Status text -->
     <TextBlock Name="TextBlockUpdaterStatus" HorizontalAlignment="Left" VerticalAlignment="Bottom"
-               Margin="40,70" Foreground="#E8C881"
+               Margin="40,0,0,105" Foreground="#E8C881"
                FontFamily="pack://application:,,,/resources/fonts/#Inter"
                FontSize="14"/>
 
@@ -297,6 +378,113 @@
     <Shaiya_Duff_Updater:iButton2 x:Name="GameStartButton" MouseLeftButtonUp="GameStartButton_Click"
                                   HorizontalAlignment="Center" VerticalAlignment="Bottom"
                                   Margin="30" Text="Start Game" Visibility="Hidden"/>
+
+    <!-- Settings overlay panel -->
+    <Grid x:Name="SettingsOverlay" Visibility="Collapsed" Panel.ZIndex="60">
+      <Border Background="#DD070709"/>
+      <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="660"
+              Background="#EE121216" BorderBrush="#4DE8C881" BorderThickness="1" CornerRadius="10">
+        <Border.Effect>
+          <DropShadowEffect Color="#E8C881" BlurRadius="30" ShadowDepth="0" Opacity="0.3"/>
+        </Border.Effect>
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="300"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+
+          <!-- Title row -->
+          <Grid Grid.Row="0" Margin="24,20,24,14">
+            <TextBlock Text="GAME SETTINGS"
+                       FontFamily="pack://application:,,,/resources/fonts/#Cinzel"
+                       FontSize="15" FontWeight="SemiBold" Foreground="#E8C881"
+                       VerticalAlignment="Center"/>
+            <TextBlock x:Name="BtnSettingsClose" Text="✕"
+                       HorizontalAlignment="Right" VerticalAlignment="Center"
+                       FontSize="14" Foreground="#7BE8C881" Cursor="Hand"
+                       MouseEnter="BtnSettingsClose_MouseEnter"
+                       MouseLeave="BtnSettingsClose_MouseLeave"
+                       MouseLeftButtonUp="BtnSettingsOverlay_Close"/>
+          </Grid>
+          <Rectangle Grid.Row="0" Height="1" VerticalAlignment="Bottom"
+                     Margin="24,0,24,0" Fill="#2DE8C881"/>
+
+          <!-- Tab bar -->
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="24,14,24,0">
+            <Border x:Name="SetTabVideo" CornerRadius="4" Margin="0,0,6,0" Padding="18,5"
+                    Background="#2DE8C881" BorderBrush="#4DE8C881" BorderThickness="1"
+                    Cursor="Hand" Tag="Video" MouseLeftButtonUp="SetTab_Click">
+              <TextBlock x:Name="SetTabVideoTxt" Text="Video" Foreground="#E8C881"
+                         FontFamily="pack://application:,,,/resources/fonts/#Cinzel"
+                         FontSize="10" FontWeight="SemiBold"/>
+            </Border>
+            <Border x:Name="SetTabInterface" CornerRadius="4" Margin="0,0,6,0" Padding="18,5"
+                    Background="Transparent" BorderBrush="#1AE8C881" BorderThickness="1"
+                    Cursor="Hand" Tag="Interface" MouseLeftButtonUp="SetTab_Click">
+              <TextBlock x:Name="SetTabInterfaceTxt" Text="Interface" Foreground="#7BE8C881"
+                         FontFamily="pack://application:,,,/resources/fonts/#Cinzel" FontSize="10"/>
+            </Border>
+            <Border x:Name="SetTabSound" CornerRadius="4" Margin="0,0,6,0" Padding="18,5"
+                    Background="Transparent" BorderBrush="#1AE8C881" BorderThickness="1"
+                    Cursor="Hand" Tag="Sound" MouseLeftButtonUp="SetTab_Click">
+              <TextBlock x:Name="SetTabSoundTxt" Text="Sound" Foreground="#7BE8C881"
+                         FontFamily="pack://application:,,,/resources/fonts/#Cinzel" FontSize="10"/>
+            </Border>
+            <Border x:Name="SetTabAdvanced" CornerRadius="4" Padding="18,5"
+                    Background="Transparent" BorderBrush="#1AE8C881" BorderThickness="1"
+                    Cursor="Hand" Tag="Advanced" MouseLeftButtonUp="SetTab_Click">
+              <TextBlock x:Name="SetTabAdvancedTxt" Text="Advanced" Foreground="#7BE8C881"
+                         FontFamily="pack://application:,,,/resources/fonts/#Cinzel" FontSize="10"/>
+            </Border>
+          </StackPanel>
+
+          <!-- Scrollable content -->
+          <Grid Grid.Row="2" Margin="24,10,24,0">
+            <ScrollViewer x:Name="SetScrollVideo" Style="{StaticResource SetScrollViewer}"
+                          VerticalScrollBarVisibility="Auto" Visibility="Visible">
+              <StackPanel x:Name="SetPanelVideo" Margin="0,0,8,0"/>
+            </ScrollViewer>
+            <ScrollViewer x:Name="SetScrollSound" Style="{StaticResource SetScrollViewer}"
+                          VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+              <StackPanel x:Name="SetPanelSound" Margin="0,0,8,0"/>
+            </ScrollViewer>
+            <ScrollViewer x:Name="SetScrollAdvanced" Style="{StaticResource SetScrollViewer}"
+                          VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+              <StackPanel x:Name="SetPanelAdvanced" Margin="0,0,8,0"/>
+            </ScrollViewer>
+            <ScrollViewer x:Name="SetScrollInterface" Style="{StaticResource SetScrollViewer}"
+                          VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+              <StackPanel x:Name="SetPanelInterface" Margin="0,0,8,0"/>
+            </ScrollViewer>
+          </Grid>
+          <Rectangle Grid.Row="2" Height="1" VerticalAlignment="Bottom"
+                     Margin="24,0,24,0" Fill="#2DE8C881"/>
+
+          <!-- Save / Cancel -->
+          <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right"
+                      Margin="24,14,24,20">
+            <Border CornerRadius="4" Padding="24,7" Margin="0,0,8,0"
+                    Background="Transparent" BorderBrush="#1AE8C881" BorderThickness="1"
+                    Cursor="Hand" MouseLeftButtonUp="BtnSettingsOverlay_Close">
+              <TextBlock Text="Cancel" Foreground="#7BE8C881"
+                         FontFamily="pack://application:,,,/resources/fonts/#Inter" FontSize="11"/>
+            </Border>
+            <Border x:Name="BtnSettingsSave" CornerRadius="4" Padding="24,7"
+                    Background="#1AE8C881" BorderBrush="#4DE8C881" BorderThickness="1"
+                    Cursor="Hand"
+                    MouseEnter="BtnSettingsSave_MouseEnter"
+                    MouseLeave="BtnSettingsSave_MouseLeave"
+                    MouseLeftButtonUp="BtnSettingsSave_Click">
+              <TextBlock Text="Save" Foreground="#E8C881"
+                         FontFamily="pack://application:,,,/resources/fonts/#Inter"
+                         FontSize="11" FontWeight="SemiBold"/>
+            </Border>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
 
     <!-- Game launch overlay panel -->
     <Grid x:Name="GameLaunchPanel" Visibility="Collapsed" Panel.ZIndex="50">

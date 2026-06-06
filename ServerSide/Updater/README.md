@@ -146,6 +146,29 @@ http://127.0.0.1/Updater/test-config.php
 
 ## Patch workflow (automatico)
 
+### Metodo raccomandato — Admin Panel web
+
+Il modo più semplice è usare il **Patch Manager** nel pannello admin del sito:
+
+```
+Sito admin → WEBSITE → Patch Manager
+```
+
+**Procedura:**
+
+1. Modifica i file game localmente → metti in `data/` con stesso percorso del data.sah/saf
+2. Esegui `SHAIYA_MAKE.exe` localmente → ottieni `Files/data.sah` + `Files/data.saf`
+3. Rinomina: `data.sah → update.sah`, `data.saf → update.saf`
+4. Apri admin panel → WEBSITE → Patch Manager
+5. Tab "Crea da SAH/SAF": carica `update.sah` + `update.saf`, inserisci descrizione
+6. Click "Crea e Carica Patch" → fatto
+
+Il server crea il ZIP, assegna la versione `NNNN`, aggiorna il manifest automaticamente.
+
+**Alternativa:** se hai già il file `.patch` pronto (creato con `crea_patch.bat`), usa il tab "Upload .patch diretto".
+
+### Metodo alternativo — Copia file manuale
+
 **Un solo passo:** copia il file `.patch` nella cartella `Patches/` con nome numerato.
 
 ```

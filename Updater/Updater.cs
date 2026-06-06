@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -198,7 +197,7 @@ namespace Shaiya_Duff_Updater
 
                 string url = AppConfig.CombineUrl(AppConfig.BaseUrl, manifest.launcherFile);
                 string newExe = AppPaths.InBase("Updater.exe.new");
-                DownloadFileWithRetry(url, newExe, null);
+                DownloadFileWithRetry(url, newExe);
 
                 if (!string.IsNullOrWhiteSpace(manifest.launcherSha256))
                 {
@@ -241,15 +240,18 @@ namespace Shaiya_Duff_Updater
             });
 
             PatchManifestItem[] patches = manifest.patches ?? new PatchManifestItem[0];
+            int totalPatches = manifest.clientVersion - Local_ClientVersion;
+            int patchIndex   = 0;
             for (int version = Local_ClientVersion + 1; version <= manifest.clientVersion; version++)
             {
+                patchIndex++;
                 PatchManifestItem item = patches.FirstOrDefault(p => p.version == version);
                 if (item == null) throw new FileNotFoundException("Patch manifest entry missing for version " + version + ".");
 
                 VersionStore.StartPatch(Local_ClientVersion, item);
                 try
                 {
-                    ApplyPatch(item);
+                    ApplyPatch(item, patchIndex, totalPatches);
                     Local_ClientVersion = version;
                     VersionStore.CommitPatch(Local_ClientVersion, item);
                 }
@@ -261,7 +263,7 @@ namespace Shaiya_Duff_Updater
             }
         }
 
-        private static void ApplyPatch(PatchManifestItem item)
+        private static void ApplyPatch(PatchManifestItem item, int patchIndex, int totalPatches)
         {
             string tempRoot = AppPaths.InBase(Path.Combine("patch", "tmp_" + item.version.ToString("D4")));
             string downloadDir = AppPaths.InBase("patch");
@@ -269,31 +271,52 @@ namespace Shaiya_Duff_Updater
             if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, true);
             Directory.CreateDirectory(tempRoot);
 
-            string patchFile = PatchPathUtil.GetPatchLocalPath(downloadDir, item);
+            string patchFile   = PatchPathUtil.GetPatchLocalPath(downloadDir, item);
             string tmpDownload = patchFile + ".download";
-            string extractDir = Path.Combine(tempRoot, "extract");
+            string extractDir  = Path.Combine(tempRoot, "extract");
+            string patchLabel  = patchIndex + " di " + totalPatches;
 
             try
             {
                 AppLogger.Patch("Patch apply started. Version=" + item.version + " File=" + item.file);
                 Utilities.ExecuteOnMainThread(delegate()
                 {
-                    MainWindow.MW.TextBlockUpdaterStatus.Text = "Downloading " + Path.GetFileName(item.file);
-                    MainWindow.MW.UpdaterProgressBar.SetProgress(0);
+                    MainWindow.MW.UpdaterProgressBar.Reset();
+                    MainWindow.MW.UpdaterProgressBar.SetStatus("Downloading (" + patchLabel + ")");
                 });
 
                 string url = PatchPathUtil.GetPatchUrl(item);
-                DownloadFileWithRetry(url, tmpDownload, wc_DownloadProgressChanged);
+                DownloadPatchWithProgress(url, tmpDownload, patchLabel);
                 if (File.Exists(patchFile)) File.Delete(patchFile);
                 File.Move(tmpDownload, patchFile);
 
                 ValidatePatchFile(item, patchFile);
 
-                Utilities.ExecuteOnMainThread(delegate() { MainWindow.MW.TextBlockUpdaterStatus.Text = "Extracting patch"; });
-                PatchExtractor.ExtractZipSafe(patchFile, extractDir);
+                string extractLabel = "Extracting (" + patchLabel + ")";
+                Utilities.ExecuteOnMainThread(delegate() { MainWindow.MW.UpdaterProgressBar.SetInstallProgress(0, extractLabel); });
+                PatchExtractor.ExtractZipSafe(patchFile, extractDir, delegate(int pct)
+                {
+                    string lbl = extractLabel;
+                    Utilities.ExecuteOnMainThread(delegate()
+                    {
+                        if (MainWindow.MW == null) return;
+                        MainWindow.MW.UpdaterProgressBar.SetInstallProgress(pct, lbl);
+                    });
+                });
 
-                Utilities.ExecuteOnMainThread(delegate() { MainWindow.MW.TextBlockUpdaterStatus.Text = "Installing patch"; });
-                PatchApplier.ApplyExtractedPatch(extractDir, item);
+                string installLabel = "Installing (" + patchLabel + ")";
+                Utilities.ExecuteOnMainThread(delegate() { MainWindow.MW.UpdaterProgressBar.SetInstallProgress(0, installLabel); });
+                PatchApplier.ApplyExtractedPatch(extractDir, item, delegate(int pct)
+                {
+                    string lbl = installLabel;
+                    Utilities.ExecuteOnMainThread(delegate()
+                    {
+                        if (MainWindow.MW == null) return;
+                        MainWindow.MW.UpdaterProgressBar.SetInstallProgress(pct, lbl);
+                    });
+                });
+
+                Utilities.ExecuteOnMainThread(delegate() { MainWindow.MW.UpdaterProgressBar.SetInstallProgress(100, "Patch " + patchLabel + " completata"); });
                 AppLogger.Patch("Patch apply completed. Version=" + item.version);
             }
             finally
@@ -301,6 +324,7 @@ namespace Shaiya_Duff_Updater
                 try { if (File.Exists(tmpDownload)) File.Delete(tmpDownload); } catch { }
                 try { if (File.Exists(patchFile)) File.Delete(patchFile); } catch { }
                 try { if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, true); } catch { }
+                try { if (Directory.Exists(downloadDir)) Directory.Delete(downloadDir); } catch { }
             }
         }
 
@@ -323,7 +347,71 @@ namespace Shaiya_Duff_Updater
             AppLogger.Patch("Patch validation OK. File=" + item.file + " Size=" + new FileInfo(patchFile).Length);
         }
 
-        private static void DownloadFileWithRetry(string url, string target, DownloadProgressChangedEventHandler progress)
+        private static void DownloadPatchWithProgress(string url, string target, string patchLabel)
+        {
+            Exception last = null;
+            for (int attempt = 1; attempt <= AppConfig.DownloadRetryCount; attempt++)
+            {
+                try
+                {
+                    if (File.Exists(target)) File.Delete(target);
+                    HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
+                    req.UserAgent = "LegacyShaiyaUpdater/1.0";
+                    req.Timeout   = AppConfig.DownloadTimeoutSeconds * 1000;
+                    using (HttpWebResponse resp = (HttpWebResponse)req.GetResponse())
+                    using (Stream src = resp.GetResponseStream())
+                    using (FileStream dst = new FileStream(target, FileMode.Create, FileAccess.Write, FileShare.None, 65536))
+                    {
+                        long total    = resp.ContentLength;
+                        long received = 0;
+                        byte[] buf    = new byte[65536];
+                        int read;
+                        long speedBytes  = 0;
+                        DateTime speedTs = DateTime.UtcNow;
+
+                        while ((read = src.Read(buf, 0, buf.Length)) > 0)
+                        {
+                            dst.Write(buf, 0, read);
+                            received  += read;
+                            speedBytes += read;
+
+                            double elapsed = (DateTime.UtcNow - speedTs).TotalSeconds;
+                            if (elapsed >= 0.15)
+                            {
+                                double bps      = speedBytes / elapsed;
+                                speedBytes      = 0;
+                                speedTs         = DateTime.UtcNow;
+                                long totalSnap  = total;
+                                long recvSnap   = received;
+                                double bpsSnap  = bps;
+                                int pct = totalSnap > 0 ? (int)Math.Min(100, recvSnap * 100 / totalSnap) : 0;
+                                Utilities.ExecuteOnMainThread(delegate()
+                                {
+                                    if (MainWindow.MW == null) return;
+                                    MainWindow.MW.UpdaterProgressBar.SetDownloadProgress(
+                                        pct,
+                                        "Downloading (" + patchLabel + ")",
+                                        FormatBytes(recvSnap),
+                                        totalSnap > 0 ? FormatBytes(totalSnap) : "?",
+                                        FormatSpeed(bpsSnap));
+                                });
+                            }
+                        }
+                    }
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    last = ex;
+                    AppLogger.PatchWarn("Download attempt " + attempt + " failed: " + url + " - " + ex.Message);
+                    try { if (File.Exists(target)) File.Delete(target); } catch { }
+                    Thread.Sleep(500);
+                }
+            }
+            throw new InvalidOperationException("Download failed: " + url + " - " + (last == null ? "unknown error" : last.Message), last);
+        }
+
+        private static void DownloadFileWithRetry(string url, string target)
         {
             Exception last = null;
             for (int attempt = 1; attempt <= AppConfig.DownloadRetryCount; attempt++)
@@ -332,10 +420,7 @@ namespace Shaiya_Duff_Updater
                 {
                     if (File.Exists(target)) File.Delete(target);
                     using (TimeoutWebClient wc = CreateWebClient())
-                    {
-                        if (progress != null) wc.DownloadProgressChanged += progress;
                         wc.DownloadFile(new Uri(url), target);
-                    }
                     return;
                 }
                 catch (Exception ex)
@@ -356,17 +441,6 @@ namespace Shaiya_Duff_Updater
             return wc;
         }
 
-        private static void wc_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
-        {
-            Utilities.ExecuteOnMainThread(delegate()
-            {
-                if (MainWindow.MW == null) return;
-                MainWindow.MW.UpdaterProgressBar.SetProgress((byte)Math.Max(0, Math.Min(100, e.ProgressPercentage)));
-                string speedInfo = e.TotalBytesToReceive > 0 ? " " + FormatBytes(e.BytesReceived) + "/" + FormatBytes(e.TotalBytesToReceive) : string.Empty;
-                MainWindow.MW.TextBlockUpdaterStatus.Text = "Downloading patch" + speedInfo;
-            });
-        }
-
         private static string FormatBytes(long bytes)
         {
             if (bytes < 1024) return bytes + " B";
@@ -374,6 +448,14 @@ namespace Shaiya_Duff_Updater
             if (kb < 1024) return kb.ToString("0.0") + " KB";
             double mb = kb / 1024.0;
             return mb.ToString("0.0") + " MB";
+        }
+
+        private static string FormatSpeed(double bps)
+        {
+            if (bps < 1024) return ((int)bps) + " B/s";
+            double kbps = bps / 1024.0;
+            if (kbps < 1024) return kbps.ToString("0.0") + " KB/s";
+            return (kbps / 1024.0).ToString("0.0") + " MB/s";
         }
     }
 }

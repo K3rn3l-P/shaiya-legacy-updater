@@ -52,6 +52,7 @@ namespace Shaiya_Duff_Updater
         private void UserControl_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (!IsSelected) ApplyVisual("#B8A065", true);
+            e.Handled = true;
         }
 
         private void UserControl_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -86,7 +87,9 @@ namespace Shaiya_Duff_Updater
                         MainWindow.MW.StartRepair();
                         break;
                     default:
-                        Process.Start(new ProcessStartInfo(Link) { UseShellExecute = true });
+                        // explorer.exe as intermediary: avoids UAC integrity-level block
+                        // when updater runs as admin and browser hasn't started yet.
+                        Process.Start(new ProcessStartInfo("explorer.exe", Link));
                         break;
                 }
             }

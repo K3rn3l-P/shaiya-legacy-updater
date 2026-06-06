@@ -53,6 +53,13 @@ namespace Shaiya_Duff_Updater
             if (!AppConfig.KeepSuccessfulBackups)
             {
                 try { if (Directory.Exists(_backupRoot)) Directory.Delete(_backupRoot, true); } catch (Exception ex) { AppLogger.PatchWarn("Could not delete backup directory: " + ex.Message); }
+                try
+                {
+                    string backupParent = Path.GetDirectoryName(_backupRoot);
+                    if (backupParent != null && Directory.Exists(backupParent))
+                        Directory.Delete(backupParent);
+                }
+                catch { }
             }
         }
 

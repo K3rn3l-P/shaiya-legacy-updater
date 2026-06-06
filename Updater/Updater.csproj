@@ -82,6 +82,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Core\IniFile.cs" />
+    <Compile Include="Core\ConfigIniSaver.cs" />
     <Compile Include="ExceptionManager.cs" />
     <Compile Include="FILE.cs" />
     <Compile Include="FOLDER.cs" />
