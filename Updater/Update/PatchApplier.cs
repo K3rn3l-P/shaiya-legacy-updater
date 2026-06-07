@@ -97,7 +97,7 @@ namespace Shaiya_Duff_Updater
                 SahCrypt.UnlockIfNeeded(dataSah, null);
 
                 if (AppConfig.SahCryptUnlockPatchSah)
-                    SahCrypt.UnlockIfNeeded(updateSah, null);
+                    SahCrypt.UnlockIfNeeded(updateSah, AppConfig.PatchCryptKeyHex);
             }
 
             SAH client = new SAH(dataSah);

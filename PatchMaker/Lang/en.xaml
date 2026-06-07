@@ -55,8 +55,12 @@
     <!-- Settings window -->
     <sys:String x:Key="SettingsTitle">Settings</sys:String>
     <sys:String x:Key="GbSahKey">SAH KEY</sys:String>
+    <sys:String x:Key="GbPatchKey">PATCH KEY (update.sah · auto-rotation 04:00)</sys:String>
     <sys:String x:Key="GbPaths">SERVER PATHS</sys:String>
     <sys:String x:Key="ChkEncryptContent">Encrypt update.sah (AES-256-GCM)</sys:String>
+    <sys:String x:Key="ChkEncryptPatchContent">Encrypt patches (AES-256-GCM)</sys:String>
+    <sys:String x:Key="TipPatchKey">AES-256 key (64 hex) for encrypting patches. Separate from SahKeyHex. Automatically rotated by the server at 04:00.</sys:String>
+    <sys:String x:Key="TipReadPatchKey">Read PatchKeyHex from GMSecurity.ini (SSH server or local file)</sys:String>
     <sys:String x:Key="BtnCancel">Cancel</sys:String>
 
     <!-- SAH Crypt panel -->

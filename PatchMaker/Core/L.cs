@@ -52,7 +52,7 @@ namespace PatchMaker
 
         // ── Errors (UI) ──────────────────────────────────────────
         public static string ErrDescRequired  => S("ERRORE: inserire una descrizione.", "ERROR: please enter a description.");
-        public static string ErrKeyRequired   => S("ERRORE: SahKeyHex non configurato (vedi Impostazioni).", "ERROR: SahKeyHex not configured (see Settings).");
+        public static string ErrKeyRequired   => S("ERRORE: PatchKeyHex non configurato (vedi Impostazioni).", "ERROR: PatchKeyHex not configured (see Settings).");
         public static string ErrBuildFirst    => S("ERRORE: genera prima la patch (▶ Genera Patch).", "ERROR: generate the patch first (▶ Generate Patch).");
         public static string ErrSshFirst      => S("ERRORE: connettiti al server SSH prima di caricare.", "ERROR: connect to SSH server before uploading.");
 
@@ -61,11 +61,12 @@ namespace PatchMaker
 
         // ── Key reading ──────────────────────────────────────────
         public static string ReadingGmSec(string p)         => S($"Lettura GMSecurity.ini dal server: {p}", $"Reading GMSecurity.ini from server: {p}");
-        public static string KeyReadFromServer(int len)      => S($"SahKeyHex letto dal server ({len} char)", $"SahKeyHex read from server ({len} chars)");
-        public static string ErrKeyNotFoundServer            => S("ERRORE: SahKeyHex non trovato in GMSecurity.ini del server.", "ERROR: SahKeyHex not found in server GMSecurity.ini.");
+        public static string KeyReadFromServer(int sahLen, int patchLen) => S($"Chiavi lette dal server — SahKeyHex ({sahLen} char), PatchKeyHex ({patchLen} char)", $"Keys read from server — SahKeyHex ({sahLen} chars), PatchKeyHex ({patchLen} chars)");
+        public static string KeyReadFromServer(int len)      => S($"Chiave letta dal server ({len} char)", $"Key read from server ({len} chars)");
+        public static string ErrKeyNotFoundServer            => S("ERRORE: chiavi non trovate in GMSecurity.ini del server.", "ERROR: keys not found in server GMSecurity.ini.");
         public static string SshReadFailed                   => S("Impossibile leggere dal server, provo file locale...", "Cannot read from server, trying local file...");
-        public static string ErrKeyNotFoundLocal(string f)  => S($"ERRORE: SahKeyHex non trovato in {f}", $"ERROR: SahKeyHex not found in {f}");
-        public static string KeyReadFromFile(string f, int len) => S($"SahKeyHex letto da {f} ({len} char)", $"SahKeyHex read from {f} ({len} chars)");
+        public static string ErrKeyNotFoundLocal(string f)  => S($"ERRORE: chiavi non trovate in {f}", $"ERROR: keys not found in {f}");
+        public static string KeyReadFromFile(string f, int len) => S($"Chiave letta da {f} ({len} char)", $"Key read from {f} ({len} chars)");
 
         // ── SSH service ──────────────────────────────────────────
         public static string SshErrorOccurred(string msg)              => $"SSH.NET ErrorOccurred: {msg}";

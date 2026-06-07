@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource SettingsTitle}"
-        Width="620" Height="290" MinWidth="540"
+        Width="620" Height="360" MinWidth="540"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -61,11 +61,12 @@
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <!-- SAH Key -->
+                <!-- SAH Key (data.sah live — rotazione manuale) -->
                 <GroupBox Grid.Row="0" Header="{DynamicResource GbSahKey}">
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -87,8 +88,30 @@
                     </Grid>
                 </GroupBox>
 
+                <!-- Patch Key (update.sah patches — rotazione automatica 04:00) -->
+                <GroupBox Grid.Row="1" Header="{DynamicResource GbPatchKey}" Margin="0,4,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="0" x:Name="ChkEncryptPatch"
+                                  Content="{DynamicResource ChkEncryptPatchContent}"
+                                  VerticalAlignment="Center" Margin="0,0,10,0"
+                                  Checked="ChkEncryptPatch_Changed" Unchecked="ChkEncryptPatch_Changed"/>
+                        <TextBox Grid.Column="1" x:Name="TbPatchKey"
+                                 FontFamily="Consolas" FontSize="10"
+                                 ToolTip="{DynamicResource TipPatchKey}"/>
+                        <Button Grid.Column="2" x:Name="BtnReadPatchKey"
+                                Content="{DynamicResource BtnReadKey}"
+                                Click="BtnReadPatchKey_Click"
+                                ToolTip="{DynamicResource TipReadPatchKey}"/>
+                    </Grid>
+                </GroupBox>
+
                 <!-- Paths -->
-                <GroupBox Grid.Row="1" Header="{DynamicResource GbPaths}" Margin="0,4,0,0">
+                <GroupBox Grid.Row="2" Header="{DynamicResource GbPaths}" Margin="0,4,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -106,11 +129,11 @@
                 </GroupBox>
 
                 <!-- Status -->
-                <TextBlock Grid.Row="2" x:Name="TbStatus" Margin="4,6,4,0"
+                <TextBlock Grid.Row="3" x:Name="TbStatus" Margin="4,6,4,0"
                            FontSize="10" Foreground="#60E8C881" TextWrapping="Wrap"/>
 
                 <!-- Buttons -->
-                <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
                     <Button x:Name="BtnSave" Click="BtnSave_Click"
                             Content="{DynamicResource BtnSaveSettings}"
                             Background="#18E8C881" BorderBrush="#7BE8C881" FontWeight="SemiBold"/>

@@ -37,12 +37,16 @@ namespace PatchMaker
 
         private void LoadSettingsToUI()
         {
-            ChkEncrypt.IsChecked     = _settings.EncryptSah;
-            TbSahKey.Text            = _settings.SahKeyHex;
-            TbSshPatchesPath.Text    = _settings.SshPatchesPath;
-            TbSshHtdocsPath.Text     = _settings.SshHtdocsPath;
-            TbSahKey.IsEnabled       = _settings.EncryptSah;
-            BtnReadKey.IsEnabled     = _settings.EncryptSah;
+            ChkEncrypt.IsChecked      = _settings.EncryptSah;
+            ChkEncryptPatch.IsChecked = _settings.EncryptPatch;
+            TbSahKey.Text             = _settings.SahKeyHex;
+            TbPatchKey.Text           = _settings.PatchKeyHex;
+            TbSshPatchesPath.Text     = _settings.SshPatchesPath;
+            TbSshHtdocsPath.Text      = _settings.SshHtdocsPath;
+            TbSahKey.IsEnabled        = _settings.EncryptSah;
+            BtnReadKey.IsEnabled      = _settings.EncryptSah;
+            TbPatchKey.IsEnabled      = _settings.EncryptPatch;
+            BtnReadPatchKey.IsEnabled = _settings.EncryptPatch;
         }
 
         private void ChkEncrypt_Changed(object sender, RoutedEventArgs e)
@@ -50,6 +54,13 @@ namespace PatchMaker
             bool on = ChkEncrypt.IsChecked == true;
             TbSahKey.IsEnabled   = on;
             BtnReadKey.IsEnabled = on;
+        }
+
+        private void ChkEncryptPatch_Changed(object sender, RoutedEventArgs e)
+        {
+            bool on = ChkEncryptPatch.IsChecked == true;
+            TbPatchKey.IsEnabled      = on;
+            BtnReadPatchKey.IsEnabled = on;
         }
 
         private void BtnReadKey_Click(object sender, RoutedEventArgs e)
@@ -62,8 +73,14 @@ namespace PatchMaker
                 try { content = _ssh.ReadTextFile(remotePath); } catch (Exception ex) { SetStatus(L.Err(ex.Message)); return; }
                 if (content != null)
                 {
-                    string k = PatchMakerSettings.ParseKeyFromIniContent(content);
-                    if (k != null) { TbSahKey.Text = k; SetStatus(L.KeyReadFromServer(k.Length)); return; }
+                    var (sah, patch) = PatchMakerSettings.ParseKeysFromIniContent(content);
+                    if (sah != null) TbSahKey.Text = sah;
+                    if (patch != null) TbPatchKey.Text = patch;
+                    if (sah != null || patch != null)
+                    {
+                        SetStatus(L.KeyReadFromServer(sah?.Length ?? 0, patch?.Length ?? 0));
+                        return;
+                    }
                     SetStatus(L.ErrKeyNotFoundServer);
                     return;
                 }
@@ -72,16 +89,46 @@ namespace PatchMaker
 
             var dlg = new OpenFileDialog { Filter = "INI files|*.ini|All files|*.*" };
             if (dlg.ShowDialog() != true) return;
-            string key = PatchMakerSettings.ReadKeyFromGmSecurityIni(dlg.FileName);
-            if (key == null) { SetStatus(L.ErrKeyNotFoundLocal(dlg.FileName)); return; }
-            TbSahKey.Text = key;
-            SetStatus(L.KeyReadFromFile(Path.GetFileName(dlg.FileName), key.Length));
+            string fileContent = File.ReadAllText(dlg.FileName);
+            var (sahLocal, patchLocal) = PatchMakerSettings.ParseKeysFromIniContent(fileContent);
+            if (sahLocal == null && patchLocal == null) { SetStatus(L.ErrKeyNotFoundLocal(dlg.FileName)); return; }
+            if (sahLocal != null) TbSahKey.Text = sahLocal;
+            if (patchLocal != null) TbPatchKey.Text = patchLocal;
+            SetStatus(L.KeyReadFromFile(Path.GetFileName(dlg.FileName), (sahLocal ?? patchLocal).Length));
+        }
+
+        private void BtnReadPatchKey_Click(object sender, RoutedEventArgs e)
+        {
+            if (_ssh != null && _ssh.IsConnected)
+            {
+                string remotePath = PatchMakerSettings.DefaultGmSecurityServerPath;
+                SetStatus(L.ReadingGmSec(remotePath));
+                string content = null;
+                try { content = _ssh.ReadTextFile(remotePath); } catch (Exception ex) { SetStatus(L.Err(ex.Message)); return; }
+                if (content != null)
+                {
+                    string patch = PatchMakerSettings.ParseKeysFromIniContent(content).patchKey;
+                    if (patch != null) { TbPatchKey.Text = patch; SetStatus(L.KeyReadFromServer(patch.Length)); return; }
+                    SetStatus(L.ErrKeyNotFoundServer);
+                    return;
+                }
+                SetStatus(L.SshReadFailed);
+            }
+
+            var dlg = new OpenFileDialog { Filter = "INI files|*.ini|All files|*.*" };
+            if (dlg.ShowDialog() != true) return;
+            string patchKey = PatchMakerSettings.ParseKeysFromIniContent(File.ReadAllText(dlg.FileName)).patchKey;
+            if (patchKey == null) { SetStatus(L.ErrKeyNotFoundLocal(dlg.FileName)); return; }
+            TbPatchKey.Text = patchKey;
+            SetStatus(L.KeyReadFromFile(Path.GetFileName(dlg.FileName), patchKey.Length));
         }
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
         {
             _settings.EncryptSah     = ChkEncrypt.IsChecked == true;
+            _settings.EncryptPatch   = ChkEncryptPatch.IsChecked == true;
             _settings.SahKeyHex      = TbSahKey.Text.Trim();
+            _settings.PatchKeyHex    = TbPatchKey.Text.Trim();
             _settings.SshPatchesPath = TbSshPatchesPath.Text.Trim();
             _settings.SshHtdocsPath  = TbSshHtdocsPath.Text.Trim();
             _settings.Save();

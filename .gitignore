@@ -21,10 +21,6 @@ Updater/logs/
 saved_accounts.local.json
 ServerSide/Updater/api/*.log
 
-# Deployment-only server config (sensitive)
-ServerSide/Updater/api/config.php
-ServerSide/Updater/api/config.local.php
-ServerSide/Updater/api/config.dev.php
 ServerSide/Updater/launcher.ini
 
 # Generic secrets
@@ -47,3 +43,24 @@ Thumbs.db
 
 # NuGet packages (restore via NuGet)
 packages/
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SEGRETI — Mai committare questi file
+# I corrispondenti file *-sample.ini/config.sample.php sono il riferimento.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Tool config con chiavi AES e credenziali SSH
+# ([Bb]in/ già copre la maggior parte, riga esplicita per chiarezza)
+**/patchmaker.ini
+**/sahcrypt.ini
+!**/patchmaker-sample.ini
+!**/sahcrypt-sample.ini
+
+# Copia server locale dell'installazione (GMSecurity.ini con chiavi reali, DLL, binari)
+ServerSide/2.ShaiyaServer/
+
+# Config PHP live (contiene chiavi da GMSecurity.ini)
+# Usare ServerSide/Updater/api/config.sample.php come template
+ServerSide/Updater/api/config.php
+ServerSide/Updater/api/config.local.php
+ServerSide/Updater/api/config.dev.php

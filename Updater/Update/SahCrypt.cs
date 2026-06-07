@@ -58,17 +58,17 @@ namespace Shaiya_Duff_Updater
             }
         }
 
-        public static bool UnlockIfNeeded(string path, string ignoredKey)
+        public static bool UnlockIfNeeded(string path, string keyHex)
         {
-            return DecryptInPlaceIfNeeded(path);
+            return DecryptInPlaceIfNeeded(path, ParseOptionalHexKey(keyHex));
         }
 
-        public static bool ProtectIfNeeded(string path, string ignoredKey)
+        public static bool ProtectIfNeeded(string path, string keyHex)
         {
-            return EncryptInPlaceIfNeeded(path);
+            return EncryptInPlaceIfNeeded(path, ParseOptionalHexKey(keyHex));
         }
 
-        public static bool DecryptInPlaceIfNeeded(string path)
+        public static bool DecryptInPlaceIfNeeded(string path, byte[] keyOverride = null)
         {
             if (!File.Exists(path)) return false;
             SahCryptState state = GetState(path);
@@ -80,7 +80,7 @@ namespace Shaiya_Duff_Updater
 
             if (state == SahCryptState.EncryptedEsah)
             {
-                plain = DecryptBuffer(input);
+                plain = DecryptBuffer(input, keyOverride);
                 backupSuffix = ".enc";
             }
             else if (state == SahCryptState.LegacyRolSah)
@@ -101,7 +101,7 @@ namespace Shaiya_Duff_Updater
             return true;
         }
 
-        public static bool EncryptInPlaceIfNeeded(string path)
+        public static bool EncryptInPlaceIfNeeded(string path, byte[] keyOverride = null)
         {
             if (!File.Exists(path)) return false;
             SahCryptState state = GetState(path);
@@ -121,13 +121,13 @@ namespace Shaiya_Duff_Updater
                 throw new InvalidDataException("Unsupported SAH header in " + Path.GetFileName(path) + ". Expected SAH, ESAH or legacy updater SAH.");
             }
 
-            byte[] encrypted = EncryptBuffer(plain);
+            byte[] encrypted = EncryptBuffer(plain, keyOverride);
             ReplaceInPlace(path, encrypted, BuildBackupPath(path, ".dec"));
             AppLogger.Info("SAH encrypted to ESAH: " + path);
             return true;
         }
 
-        public static byte[] EncryptBuffer(byte[] plain)
+        public static byte[] EncryptBuffer(byte[] plain, byte[] keyOverride = null)
         {
             if (plain == null) throw new ArgumentNullException("plain");
             if (!StartsWith(plain, PlainMagic))
@@ -137,7 +137,7 @@ namespace Shaiya_Duff_Updater
             BCryptRandom(nonce);
 
             byte[] tag;
-            byte[] cipher = AesGcmCrypt(true, plain, nonce, null, out tag);
+            byte[] cipher = AesGcmCrypt(true, plain, nonce, null, out tag, keyOverride);
 
             byte[] output = new byte[HeaderSize + cipher.Length];
             Buffer.BlockCopy(EncryptedMagic, 0, output, 0, 4);
@@ -150,7 +150,7 @@ namespace Shaiya_Duff_Updater
             return output;
         }
 
-        public static byte[] DecryptBuffer(byte[] encrypted)
+        public static byte[] DecryptBuffer(byte[] encrypted, byte[] keyOverride = null)
         {
             if (encrypted == null) throw new ArgumentNullException("encrypted");
             if (encrypted.Length < HeaderSize) throw new InvalidDataException("Input file is too small to contain ESAH header.");
@@ -170,9 +170,15 @@ namespace Shaiya_Duff_Updater
             Buffer.BlockCopy(encrypted, HeaderSize, cipher, 0, cipher.Length);
 
             byte[] ignoredTag;
-            byte[] plain = AesGcmCrypt(false, cipher, nonce, tag, out ignoredTag);
+            byte[] plain = AesGcmCrypt(false, cipher, nonce, tag, out ignoredTag, keyOverride);
             if ((ulong)plain.Length != plainSize) throw new InvalidDataException("Plain size mismatch after decrypt.");
             return plain;
+        }
+
+        private static byte[] ParseOptionalHexKey(string keyHex)
+        {
+            if (string.IsNullOrWhiteSpace(keyHex)) return null;
+            try { return ParseHexKey(keyHex); } catch { return null; }
         }
 
         private static string BuildBackupPath(string originalPath, string suffix)
@@ -315,7 +321,7 @@ namespace Shaiya_Duff_Updater
             ThrowIfFailed(status, "BCryptGenRandom");
         }
 
-        private static byte[] AesGcmCrypt(bool encrypt, byte[] input, byte[] nonce, byte[] tagIn, out byte[] tagOut)
+        private static byte[] AesGcmCrypt(bool encrypt, byte[] input, byte[] nonce, byte[] tagIn, out byte[] tagOut, byte[] keyOverride = null)
         {
             IntPtr hAlg = IntPtr.Zero;
             IntPtr hKey = IntPtr.Zero;
@@ -334,7 +340,7 @@ namespace Shaiya_Duff_Updater
                 ThrowIfFailed(Native.BCryptGetProperty(hAlg, Native.BCRYPT_OBJECT_LENGTH, out objectLength, 4, out bytesWritten, 0), "BCryptGetProperty(OBJECT_LENGTH)");
 
                 keyObject = new byte[objectLength];
-                byte[] key = ResolveKeyFromServerIni();
+                byte[] key = keyOverride ?? ResolveKeyFromServerIni();
                 if (key == null) throw new InvalidOperationException("SahCrypt key is not available. Please log in first.");
                 ThrowIfFailed(Native.BCryptGenerateSymmetricKey(hAlg, out hKey, keyObject, keyObject.Length, key, key.Length, 0), "BCryptGenerateSymmetricKey");
 

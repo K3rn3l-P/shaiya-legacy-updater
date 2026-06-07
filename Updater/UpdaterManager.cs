@@ -110,6 +110,8 @@ namespace Shaiya_Duff_Updater
                         MainWindow.MW.LaunchToken = response.launchToken;
                         if (!string.IsNullOrEmpty(response.sahKey))
                             AppConfig.SahCryptKeyHex = response.sahKey;
+                        if (!string.IsNullOrEmpty(response.patchKey))
+                            AppConfig.PatchCryptKeyHex = response.patchKey;
                         MainWindow.MW.LoadAnimation.Visibility = Visibility.Hidden;
                         Updater.Continue();
 

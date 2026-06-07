@@ -91,6 +91,8 @@ namespace Shaiya_Duff_Updater
         public static string SahCryptKeyText = string.Empty;
         public static string SahCryptKeyBase64 = string.Empty;
         public static string SahCryptKey = string.Empty;
+        // Chiave AES-256 per patch/update files (separata da SahCryptKeyHex, ruotata ogni notte).
+        public static string PatchCryptKeyHex = string.Empty;
 
         public static string ConfigUrl { get { return CombineUrl(BaseUrl, ConfigFile); } }
         public static string ManifestUrl { get { return CombineUrl(BaseUrl, ManifestFile); } }

@@ -15,9 +15,11 @@ namespace PatchMaker
         public string SshPatchesPath { get; set; } = "/C:/xampp/htdocs/Updater/Patches";
         public string SshHtdocsPath { get; set; } = "/C:/xampp/htdocs/Updater";
         public string WorkspacePath { get; set; } = "";
-        public string SahKeyHex  { get; set; } = "";
-        public bool   EncryptSah { get; set; } = true;
-        public string Language   { get; set; } = "It";
+        public string SahKeyHex    { get; set; } = "";
+        public string PatchKeyHex  { get; set; } = "";
+        public bool   EncryptSah   { get; set; } = true;
+        public bool   EncryptPatch { get; set; } = true;
+        public string Language     { get; set; } = "It";
 
         public string ResolvedWorkspace =>
             string.IsNullOrWhiteSpace(WorkspacePath)
@@ -44,9 +46,11 @@ namespace PatchMaker
                         case "SshPatchesPath": s.SshPatchesPath = val; break;
                         case "SshHtdocsPath":  s.SshHtdocsPath  = val; break;
                         case "WorkspacePath":  s.WorkspacePath  = val; break;
-                        case "SahKeyHex":  s.SahKeyHex  = val; break;
-                        case "EncryptSah": s.EncryptSah = !val.Equals("False", StringComparison.OrdinalIgnoreCase); break;
-                        case "Language":   s.Language   = val; break;
+                        case "SahKeyHex":   s.SahKeyHex   = val; break;
+                        case "PatchKeyHex": s.PatchKeyHex = val; break;
+                        case "EncryptSah":   s.EncryptSah   = !val.Equals("False", StringComparison.OrdinalIgnoreCase); break;
+                        case "EncryptPatch": s.EncryptPatch = !val.Equals("False", StringComparison.OrdinalIgnoreCase); break;
+                        case "Language":     s.Language     = val; break;
                     }
                 }
             }
@@ -66,9 +70,11 @@ namespace PatchMaker
                     "SshPatchesPath=" + SshPatchesPath,
                     "SshHtdocsPath="  + SshHtdocsPath,
                     "WorkspacePath="  + WorkspacePath,
-                    "SahKeyHex="  + SahKeyHex,
-                    "EncryptSah=" + EncryptSah,
-                    "Language="   + Language,
+                    "SahKeyHex="   + SahKeyHex,
+                    "PatchKeyHex=" + PatchKeyHex,
+                    "EncryptSah="   + EncryptSah,
+                    "EncryptPatch=" + EncryptPatch,
+                    "Language="     + Language,
                 });
             }
             catch { }
@@ -76,20 +82,30 @@ namespace PatchMaker
 
         public const string DefaultGmSecurityServerPath = "C:/ShaiyaServer/PSM_Client/Bin/Data/GMSecurity.ini";
 
-        public static string ParseKeyFromIniContent(string content)
+        // Ritorna (sahKeyHex, patchKeyHex) letti dal contenuto di GMSecurity.ini.
+        public static (string sahKey, string patchKey) ParseKeysFromIniContent(string content)
         {
-            if (content == null) return null;
+            string sah = null, patch = null;
+            if (content == null) return (null, null);
             foreach (string line in content.Split('\n'))
             {
                 string trimmed = line.Trim();
-                if (trimmed.StartsWith("SahKeyHex", StringComparison.OrdinalIgnoreCase) ||
-                    trimmed.StartsWith("SahCryptKeyHex", StringComparison.OrdinalIgnoreCase))
-                {
-                    int eq = trimmed.IndexOf('=');
-                    if (eq >= 0) return trimmed.Substring(eq + 1).Trim();
-                }
+                int eq = trimmed.IndexOf('=');
+                if (eq < 1) continue;
+                string k = trimmed.Substring(0, eq).Trim();
+                string v = trimmed.Substring(eq + 1).Trim();
+                if (k.Equals("SahKeyHex", StringComparison.OrdinalIgnoreCase) ||
+                    k.Equals("SahCryptKeyHex", StringComparison.OrdinalIgnoreCase))
+                    sah = v;
+                else if (k.Equals("PatchKeyHex", StringComparison.OrdinalIgnoreCase))
+                    patch = v;
             }
-            return null;
+            return (sah, patch);
+        }
+
+        public static string ParseKeyFromIniContent(string content)
+        {
+            return ParseKeysFromIniContent(content).sahKey;
         }
 
         public static string ReadKeyFromGmSecurityIni(string iniPath)

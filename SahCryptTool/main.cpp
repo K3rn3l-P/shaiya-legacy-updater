@@ -927,6 +927,10 @@ void PrintGuide()
     std::cout << "=========================================\n";
     std::cout << "      SAHCRYPT - Data.sah Tool\n";
     std::cout << "=========================================\n\n";
+    std::cout << "CLI (in-place, chiave da ini/SSH):\n";
+    std::cout << "  sahcrypt.exe encrypt|decrypt <path\\data.sah>\n\n";
+    std::cout << "CLI (input->output espliciti, chiave hex inline):\n";
+    std::cout << "  sahcrypt.exe encrypt|decrypt <input> <output> <64hexkey>\n\n";
     std::cout << "La chiave viene cercata in questo ordine:\n";
     std::cout << "  1. SahKeyHex in sahcrypt.ini  (cache locale, accanto all'exe)\n";
     std::cout << "  2. SahKeyHex in patchmaker.ini (accanto all'exe)\n";
@@ -937,10 +941,9 @@ void PrintGuide()
     std::cout << "       SshRemotePath=<path GMSecurity.ini>\n";
     std::cout << "       SshKeyPath=<chiave privata>   ; oppure SshPassword=<pass>\n";
     std::cout << "       SahKeyName=SahCryptKeyHex     ; nome chiave (default)\n\n";
-    std::cout << "Backup naming:\n";
+    std::cout << "Backup naming (in-place):\n";
     std::cout << "  Encrypt -> vecchio file diventa Data.dec.sah\n";
     std::cout << "  Decrypt -> vecchio file diventa Data.enc.sah\n\n";
-    std::cout << "CLI: sahcrypt.exe encrypt|decrypt <path\\data.sah>\n\n";
 }
 
 /* ── Entry point ──────────────────────────────────────── */
@@ -950,11 +953,65 @@ int wmain(int argc, wchar_t* argv[])
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleTitleW(L"SahCrypt - Data.sah Encrypt/Decrypt Tool");
 
-    PrintGuide();
+    if (argc < 3) PrintGuide();
 
     try
     {
-        // CLI mode
+        // CLI mode: encrypt|decrypt <input> <output> <64hexkey>
+        if (argc == 5)
+        {
+            const std::wstring modeArg = argv[1];
+            const fs::path inputPath   = fs::path(argv[2]);
+            const fs::path outputPath  = fs::path(argv[3]);
+            const std::wstring hexW    = argv[4];
+            const std::string hexStr(hexW.begin(), hexW.end());
+
+            Mode mode{};
+            if      (modeArg == L"encrypt") mode = Mode::Encrypt;
+            else if (modeArg == L"decrypt") mode = Mode::Decrypt;
+            else
+            {
+                std::cerr << "[err] Modalita' non valida. Usa: encrypt o decrypt\n";
+                return 1;
+            }
+
+            std::array<uint8_t, kKeySize> key{};
+            std::string keyError;
+            if (!HexToBytes(hexStr, key, keyError))
+            {
+                std::cerr << "[err] Chiave non valida: " << keyError << "\n";
+                return 1;
+            }
+
+            std::vector<uint8_t> input, output;
+            std::string error;
+            if (!ReadFileBytes(inputPath, input, error))
+            {
+                std::cerr << "[err] " << error << "\n";
+                return 1;
+            }
+
+            if (mode == Mode::Encrypt)
+            {
+                if (!IsPlainSah(input)) { std::cerr << "[err] Input non e' un SAH valido (magic SAH mancante).\n"; return 2; }
+                if (!EncryptBuffer(key, input, output, error)) { std::cerr << "[err] " << error << "\n"; return 2; }
+            }
+            else
+            {
+                if (!IsEncryptedSah(input)) { std::cerr << "[err] Input non e' un file ESAH (magic ESAH mancante).\n"; return 2; }
+                if (!DecryptBuffer(key, input, output, error)) { std::cerr << "[err] " << error << "\n"; return 2; }
+            }
+
+            if (!WriteFileBytes(outputPath, output, error))
+            {
+                std::cerr << "[err] " << error << "\n";
+                return 1;
+            }
+            std::cout << "[ok] " << (mode == Mode::Encrypt ? "Encrypt" : "Decrypt") << " completato: " << PathToStr(outputPath) << "\n";
+            return 0;
+        }
+
+        // CLI mode: encrypt|decrypt <path\data.sah>  (in-place, chiave da ini/SSH)
         if (argc == 3)
         {
             const std::wstring modeArg = argv[1];
@@ -966,7 +1023,6 @@ int wmain(int argc, wchar_t* argv[])
             else
             {
                 std::cerr << "[err] Modalita' non valida. Usa: encrypt o decrypt\n";
-                PauseAtEnd();
                 return 1;
             }
 
@@ -975,7 +1031,6 @@ int wmain(int argc, wchar_t* argv[])
             if (!LoadSahKey(key, keyError))
             {
                 std::cerr << "\n[err] " << keyError << "\n";
-                PauseAtEnd();
                 return 1;
             }
 
@@ -983,11 +1038,9 @@ int wmain(int argc, wchar_t* argv[])
             if (!RunInPlaceConversion(pathArg, mode, key, error))
             {
                 std::cerr << "[err] " << error << "\n";
-                PauseAtEnd();
                 return 2;
             }
 
-            PauseAtEnd();
             return 0;
         }
 

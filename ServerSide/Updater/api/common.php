@@ -277,6 +277,12 @@ function get_sah_key_hex() {
     return (strlen($key) === 64 && ctype_xdigit($key)) ? $key : null;
 }
 
+function get_patch_key_hex() {
+    global $config;
+    $key = isset($config['patch_key_hex']) ? trim((string)$config['patch_key_hex']) : '';
+    return (strlen($key) === 64 && ctype_xdigit($key)) ? $key : null;
+}
+
 // Calcola il token effimero per l'autenticazione client (0xA101 RSA handshake).
 // Stesso algoritmo di verify_rsa_client_token() in sdev-login.dll:
 //   HMAC-SHA256("client:" + floor(time/300), client_secret) → primi 4 byte LE come hex uint32.
@@ -302,6 +308,10 @@ function success_response($userId, $userUid, $passwordForGame) {
     $sahKey = get_sah_key_hex();
     if ($sahKey !== null) {
         $resp['sahKey'] = $sahKey;
+    }
+    $patchKey = get_patch_key_hex();
+    if ($patchKey !== null) {
+        $resp['patchKey'] = $patchKey;
     }
     $launchToken = get_launch_token();
     if ($launchToken !== null) {

@@ -233,12 +233,12 @@ namespace PatchMaker
                 SaveSettingsFromUI();
                 string workspace = TbWorkspace.Text.Trim();
                 string desc      = TbPatchDesc.Text.Trim();
-                bool   encryptSah = _settings.EncryptSah;
-                string sahKeyHex  = encryptSah ? _settings.SahKeyHex : null;
-                string deleteLst  = ChkDeleteLst.IsChecked == true ? TbDeleteLst.Text : null;
+                bool   encryptSah  = _settings.EncryptSah && _settings.EncryptPatch;
+                string patchKeyHex = encryptSah ? _settings.PatchKeyHex : null;
+                string deleteLst   = ChkDeleteLst.IsChecked == true ? TbDeleteLst.Text : null;
 
                 if (string.IsNullOrWhiteSpace(desc)) { Log(L.ErrDescRequired); return; }
-                if (encryptSah && string.IsNullOrWhiteSpace(sahKeyHex)) { Log(L.ErrKeyRequired); return; }
+                if (encryptSah && string.IsNullOrWhiteSpace(patchKeyHex)) { Log(L.ErrKeyRequired); return; }
 
                 int patchNum = await ResolvePatchNumber();
                 Log(L.PatchNumber(patchNum));
@@ -247,7 +247,7 @@ namespace PatchMaker
                 await RunAsync(() =>
                 {
                     var builder = new PatchBuilder(Log);
-                    patchPath = builder.Build(workspace, patchNum, desc, sahKeyHex, deleteLst, encryptSah);
+                    patchPath = builder.Build(workspace, patchNum, desc, patchKeyHex, deleteLst, encryptSah);
                 });
 
                 if (patchPath != null)
@@ -308,10 +308,10 @@ namespace PatchMaker
                 patchPath = dlg.FileName;
             }
 
-            string sahKeyHex = _settings.SahKeyHex;
+            string patchKeyHex = _settings.PatchKeyHex;
 
             BtnVerify.IsEnabled = false;
-            await RunAsync(() => VerifyPatch(patchPath, sahKeyHex));
+            await RunAsync(() => VerifyPatch(patchPath, patchKeyHex));
             BtnVerify.IsEnabled = true;
         }
 
@@ -378,10 +378,10 @@ namespace PatchMaker
                 patchPath = dlg.FileName;
             }
 
-            string sahKeyHex = _settings.SahKeyHex;
+            string patchKeyHex = _settings.PatchKeyHex;
 
             BtnExtract.IsEnabled = false;
-            await RunAsync(() => ExtractPatch(patchPath, sahKeyHex));
+            await RunAsync(() => ExtractPatch(patchPath, patchKeyHex));
             BtnExtract.IsEnabled = true;
         }
 
@@ -452,13 +452,20 @@ namespace PatchMaker
             }
         }
 
+        // update.sah (dentro patch) usa PatchKeyHex; data.sah usa SahKeyHex.
+        private string ResolveSahCryptKey(string filePath)
+        {
+            bool isUpdateSah = Path.GetFileName(filePath).Equals("update.sah", StringComparison.OrdinalIgnoreCase);
+            return isUpdateSah ? _settings.PatchKeyHex : _settings.SahKeyHex;
+        }
+
         private async void BtnEncryptSah_Click(object sender, RoutedEventArgs e)
         {
             string path = TbSahFile.Text.Trim();
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             { SetSahStatus(L.ErrSelectSahFirst, true); return; }
 
-            string keyHex = _settings.SahKeyHex;
+            string keyHex = ResolveSahCryptKey(path);
             if (string.IsNullOrWhiteSpace(keyHex))
             { SetSahStatus(L.ErrKeyRequiredSah, true); return; }
 
@@ -473,7 +480,7 @@ namespace PatchMaker
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             { SetSahStatus(L.ErrSelectSahFirst, true); return; }
 
-            string keyHex = _settings.SahKeyHex;
+            string keyHex = ResolveSahCryptKey(path);
             if (string.IsNullOrWhiteSpace(keyHex))
             { SetSahStatus(L.ErrKeyRequiredSah, true); return; }
 
