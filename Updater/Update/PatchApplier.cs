@@ -4,6 +4,16 @@ using System.Linq;
 
 namespace Shaiya_Duff_Updater
 {
+    // Thrown when update.sah decrypt fails with STATUS_AUTH_TAG_MISMATCH (0xC000A002):
+    // the patch on the server was re-encrypted after 04:00 rotation but the client still
+    // holds the old PatchCryptKeyHex from a login that happened before the rotation.
+    // Recovery: clear the old key and ask the user to re-login.
+    public sealed class PatchKeyExpiredException : InvalidOperationException
+    {
+        public PatchKeyExpiredException()
+            : base("La chiave patch è scaduta (rotazione 04:00). Premi Log Out e accedi nuovamente per continuare l'aggiornamento.") { }
+    }
+
     public static class PatchApplier
     {
         public static void ApplyExtractedPatch(string extractedDir, PatchManifestItem item)
@@ -97,7 +107,20 @@ namespace Shaiya_Duff_Updater
                 SahCrypt.UnlockIfNeeded(dataSah, null);
 
                 if (AppConfig.SahCryptUnlockPatchSah)
-                    SahCrypt.UnlockIfNeeded(updateSah, AppConfig.PatchCryptKeyHex);
+                {
+                    try
+                    {
+                        SahCrypt.UnlockIfNeeded(updateSah, AppConfig.PatchCryptKeyHex);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        // 0xC000A002 = STATUS_AUTH_TAG_MISMATCH: GCM authentication failed.
+                        // The patch was re-encrypted after the 04:00 key rotation — old key in memory.
+                        if (ex.Message.Contains("C000A002"))
+                            throw new PatchKeyExpiredException();
+                        throw;
+                    }
+                }
             }
 
             SAH client = new SAH(dataSah);

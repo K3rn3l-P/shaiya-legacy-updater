@@ -105,6 +105,24 @@ namespace Shaiya_Duff_Updater
                     MainWindow.MW.CanStartGame();
                 });
             }
+            catch (PatchKeyExpiredException ex)
+            {
+                // The patch was re-encrypted by the 04:00 rotation after the user logged in.
+                // Clear the stale key and ask for re-login — the next login will return the new key.
+                AppConfig.PatchCryptKeyHex = string.Empty;
+                string staleDir = AppPaths.InBase("patch");
+                try { if (Directory.Exists(staleDir)) Directory.Delete(staleDir, true); } catch { }
+                AppLogger.Warn("Patch key expired (04:00 rotation). User must re-login to get the new key.");
+                Utilities.ExecuteOnMainThread(delegate()
+                {
+                    if (MainWindow.MW != null)
+                    {
+                        MainWindow.MW.UpdaterProgressBar.Visibility = Visibility.Hidden;
+                        MainWindow.MW.TextBlockUpdaterStatus.Text = "Chiave patch scaduta — ri-login necessario";
+                    }
+                    MessageDialog.Display("Aggiornamento", ex.Message);
+                });
+            }
             catch (Exception ex)
             {
                 ExceptionManager.Submit(ex);
@@ -232,6 +250,15 @@ namespace Shaiya_Duff_Updater
         private static void UpdateClient(LauncherManifest manifest)
         {
             GameProcessGuard.ThrowIfGameRunningForPatch();
+
+            // Purge stale .patch/.download files left by a previous crashed session.
+            // Under normal operation the finally block in ApplyPatch deletes everything,
+            // but a hard kill (power loss, task kill) can leave orphans.
+            string patchStagingDir = AppPaths.InBase("patch");
+            if (Directory.Exists(patchStagingDir))
+            {
+                try { Directory.Delete(patchStagingDir, true); } catch { }
+            }
 
             Utilities.ExecuteOnMainThread(delegate()
             {
