@@ -107,20 +107,18 @@ namespace Shaiya_Duff_Updater
             }
             catch (PatchKeyExpiredException ex)
             {
-                // The patch was re-encrypted by the 04:00 rotation after the user logged in.
-                // Clear the stale key and ask for re-login — the next login will return the new key.
                 AppConfig.PatchCryptKeyHex = string.Empty;
                 string staleDir = AppPaths.InBase("patch");
                 try { if (Directory.Exists(staleDir)) Directory.Delete(staleDir, true); } catch { }
-                AppLogger.Warn("Patch key expired (04:00 rotation). User must re-login to get the new key.");
+                AppLogger.Debug("patch", "Patch key expired (server rotation). Old key cleared, patch dir purged. NTSTATUS=0xC000A002.");
                 Utilities.ExecuteOnMainThread(delegate()
                 {
                     if (MainWindow.MW != null)
                     {
                         MainWindow.MW.UpdaterProgressBar.Visibility = Visibility.Hidden;
-                        MainWindow.MW.TextBlockUpdaterStatus.Text = "Chiave patch scaduta — ri-login necessario";
+                        MainWindow.MW.TextBlockUpdaterStatus.Text = "Update failed.";
                     }
-                    MessageDialog.Display("Aggiornamento", ex.Message);
+                    MessageDialog.Display("Update Error", ex.Message);
                 });
             }
             catch (Exception ex)

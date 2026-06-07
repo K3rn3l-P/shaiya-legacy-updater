@@ -4,14 +4,10 @@ using System.Linq;
 
 namespace Shaiya_Duff_Updater
 {
-    // Thrown when update.sah decrypt fails with STATUS_AUTH_TAG_MISMATCH (0xC000A002):
-    // the patch on the server was re-encrypted after 04:00 rotation but the client still
-    // holds the old PatchCryptKeyHex from a login that happened before the rotation.
-    // Recovery: clear the old key and ask the user to re-login.
     public sealed class PatchKeyExpiredException : InvalidOperationException
     {
         public PatchKeyExpiredException()
-            : base("La chiave patch è scaduta (rotazione 04:00). Premi Log Out e accedi nuovamente per continuare l'aggiornamento.") { }
+            : base("Update failed. Please log out and sign in again to continue.") { }
     }
 
     public static class PatchApplier
