@@ -2,266 +2,27 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="PatchMaker — Shaiya Patch Tool"
-        Width="880" Height="710" MinWidth="740" MinHeight="540"
+        Width="880" Height="720" MinWidth="740" MinHeight="540"
         WindowStartupLocation="CenterScreen"
-        Background="#070709"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="CanMinimize"
         FontFamily="Segoe UI"
         Foreground="#E0E0E0"
         FontSize="12">
 
-    <Window.Resources>
-
-        <!-- ── GroupBox ─────────────────────────────────────────── -->
-        <Style TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,4,0,0"/>
-            <Setter Property="Padding" Value="10,8,10,10"/>
-            <Setter Property="BorderBrush" Value="#4DE8C881"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="#E8C881"/>
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="GroupBox">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="14"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <Border Grid.RowSpan="2" CornerRadius="6"
-                                    Background="#0F0F14"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="{TemplateBinding BorderThickness}"/>
-                            <Border Grid.Row="0" Margin="12,-6,0,0"
-                                    Background="#070709" Padding="5,0"
-                                    HorizontalAlignment="Left" VerticalAlignment="Center">
-                                <ContentPresenter ContentSource="Header"
-                                                  TextBlock.Foreground="#E8C881"
-                                                  TextBlock.FontSize="9"
-                                                  TextBlock.FontWeight="SemiBold"
-                                                  TextBlock.FontFamily="Segoe UI"/>
-                            </Border>
-                            <ContentPresenter Grid.Row="1" Margin="{TemplateBinding Padding}"/>
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ── Button ───────────────────────────────────────────── -->
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="12,5"/>
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Background" Value="#10E8C881"/>
-            <Setter Property="BorderBrush" Value="#4DE8C881"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="#DDE8C881"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd" CornerRadius="4"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#25E8C881"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#7BE8C881"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#38E8C881"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bd" Property="Background" Value="#08E8C881"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#18E8C881"/>
-                                <Setter Property="Foreground" Value="#30E8C881"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ── TextBox ──────────────────────────────────────────── -->
-        <Style TargetType="TextBox">
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="MinHeight" Value="26"/>
-            <Setter Property="Background" Value="#080810"/>
-            <Setter Property="BorderBrush" Value="#28E8C881"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="#DDE0E0E0"/>
-            <Setter Property="CaretBrush" Value="#E8C881"/>
-            <Setter Property="SelectionBrush" Value="#35E8C881"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border x:Name="Bd" CornerRadius="4"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="0"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#7BE8C881"/>
-                            </Trigger>
-                            <Trigger Property="IsReadOnly" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#080810"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#12E8C881"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ── PasswordBox ──────────────────────────────────────── -->
-        <Style TargetType="PasswordBox">
-            <Setter Property="Margin" Value="2"/>
-            <Setter Property="Padding" Value="6,4"/>
-            <Setter Property="MinHeight" Value="26"/>
-            <Setter Property="Background" Value="#080810"/>
-            <Setter Property="BorderBrush" Value="#28E8C881"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Foreground" Value="#DDE0E0E0"/>
-            <Setter Property="CaretBrush" Value="#E8C881"/>
-            <Setter Property="SelectionBrush" Value="#35E8C881"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="PasswordBox">
-                        <Border x:Name="Bd" CornerRadius="4"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}">
-                            <ScrollViewer x:Name="PART_ContentHost" Margin="0"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsFocused" Value="True">
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#7BE8C881"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ── Label ────────────────────────────────────────────── -->
-        <Style TargetType="Label">
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Padding" Value="0,0,6,0"/>
-            <Setter Property="Foreground" Value="#88E0E0E0"/>
-            <Setter Property="FontSize" Value="11"/>
-        </Style>
-
-        <!-- ── CheckBox (stile Updater) ─────────────────────────── -->
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="#99E0E0E0"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="OverridesDefaultStyle" Value="True"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="CheckBox">
-                        <BulletDecorator Background="Transparent">
-                            <BulletDecorator.Bullet>
-                                <Border x:Name="Border" Width="13" Height="13" CornerRadius="2"
-                                        Background="Transparent" BorderThickness="1" BorderBrush="#4DE8C881">
-                                    <Path x:Name="CheckMark" SnapsToDevicePixels="False"
-                                          Stroke="#E8C881" StrokeThickness="1.5"
-                                          Data="M 0,0 L 9,9 M 0,9 L 9,0"
-                                          Width="9" Height="9"
-                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                            </BulletDecorator.Bullet>
-                            <ContentPresenter Margin="6,0,0,0" VerticalAlignment="Center"/>
-                        </BulletDecorator>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="False">
-                                <Setter TargetName="CheckMark" Property="Visibility" Value="Collapsed"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#7BE8C881"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#20E8C881"/>
-                                <Setter Property="Foreground" Value="#30E8C881"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ── Scrollbar sottile gold ────────────────────────────── -->
-        <ControlTemplate x:Key="GoldScrollThumb" TargetType="Thumb">
-            <Border x:Name="Bd" CornerRadius="3" Background="#50E8C881" Margin="1,0"/>
-            <ControlTemplate.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#B0E8C881"/>
-                </Trigger>
-                <Trigger Property="IsDragging" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#E8C881"/>
-                </Trigger>
-            </ControlTemplate.Triggers>
-        </ControlTemplate>
-        <ControlTemplate x:Key="GoldScrollBtn" TargetType="RepeatButton">
-            <Border Background="Transparent" Height="0"/>
-        </ControlTemplate>
-        <Style x:Key="GoldScrollBar" TargetType="ScrollBar">
-            <Setter Property="OverridesDefaultStyle" Value="True"/>
-            <Setter Property="Width" Value="6"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollBar">
-                        <Border CornerRadius="3" Background="#0AE8C881">
-                            <Track x:Name="PART_Track" IsDirectionReversed="True" Margin="0,2">
-                                <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="ScrollBar.PageUpCommand"
-                                                  Template="{StaticResource GoldScrollBtn}" Focusable="False"/>
-                                </Track.DecreaseRepeatButton>
-                                <Track.Thumb>
-                                    <Thumb Template="{StaticResource GoldScrollThumb}"/>
-                                </Track.Thumb>
-                                <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="ScrollBar.PageDownCommand"
-                                                  Template="{StaticResource GoldScrollBtn}" Focusable="False"/>
-                                </Track.IncreaseRepeatButton>
-                            </Track>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-    </Window.Resources>
-
-    <Grid>
-        <Rectangle>
-            <Rectangle.Fill>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Color="#0D0D10" Offset="0"/>
-                    <GradientStop Color="#070709" Offset="1"/>
-                </LinearGradientBrush>
-            </Rectangle.Fill>
-        </Rectangle>
+    <!-- Outer rounded border with gradient background -->
+    <Border CornerRadius="8" BorderBrush="#4DE8C881" BorderThickness="1" ClipToBounds="True">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#0D0D10" Offset="0"/>
+                <GradientStop Color="#070709" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+        <Border.Effect>
+            <DropShadowEffect Color="#E8C881" BlurRadius="24" ShadowDepth="0" Opacity="0.13"/>
+        </Border.Effect>
 
         <Grid Margin="12,10,12,12">
             <Grid.RowDefinitions>
@@ -273,7 +34,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- ── Header ───────────────────────────────────────── -->
+            <!-- ── Header (draggable) ────────────────────────────── -->
             <Border Grid.Row="0" Margin="0,0,0,8" Padding="16,10"
                     CornerRadius="6" BorderThickness="1" BorderBrush="#2DE8C881"
                     Background="#0F0F14">
@@ -281,25 +42,70 @@
                     <DropShadowEffect Color="#E8C881" BlurRadius="18" ShadowDepth="0" Opacity="0.08"/>
                 </Border.Effect>
                 <Grid>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <!-- Left: title + subtitle + by K3rn3l (area drag) -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                MouseLeftButtonDown="DragWindow">
                         <TextBlock Text="PATCHMAKER" Foreground="#E8C881"
                                    FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
                         <Rectangle Width="1" Height="14" Fill="#2DE8C881" Margin="12,0"/>
                         <TextBlock Text="{DynamicResource AppSubtitle}" Foreground="#50E8C881"
                                    FontSize="11" VerticalAlignment="Center"/>
+                        <TextBlock Text="  ·  by K3rn3l" Foreground="#28E8C881"
+                                   FontSize="10" VerticalAlignment="Center" FontStyle="Italic"/>
                     </StackPanel>
-                    <!-- Language toggle -->
+
+                    <!-- Right: gear + lang + min + close -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                 VerticalAlignment="Center">
+
+                        <!-- Settings gear -->
+                        <Border x:Name="BtnSettings" CornerRadius="3" Padding="9,3" Cursor="Hand"
+                                BorderThickness="1" Background="Transparent"
+                                MouseLeftButtonUp="BtnSettings_Click"
+                                MouseEnter="BtnChromeBtn_MouseEnter"
+                                MouseLeave="BtnChromeBtn_MouseLeave">
+                            <Border.BorderBrush><SolidColorBrush Color="#20E8C881"/></Border.BorderBrush>
+                            <TextBlock Text="⚙" FontSize="13" Foreground="#60E8C881"
+                                       VerticalAlignment="Center" IsHitTestVisible="False"/>
+                        </Border>
+
+                        <TextBlock Text="  " FontSize="10" Margin="3,0"/>
+                        <Rectangle Width="1" Height="14" Fill="#15E8C881" Margin="0,0,8,0"/>
+
+                        <!-- Language toggle -->
                         <Border x:Name="BtnLangIt" CornerRadius="3" Padding="10,3" Cursor="Hand"
                                 BorderThickness="1" MouseLeftButtonUp="BtnLangIt_Click">
                             <TextBlock x:Name="TbLangIt" Text="IT" FontSize="10" FontWeight="Bold"/>
                         </Border>
-                        <TextBlock Text=" │ " Foreground="#20E8C881" VerticalAlignment="Center" FontSize="10" Margin="1,0"/>
+                        <TextBlock Text=" │ " Foreground="#20E8C881" VerticalAlignment="Center"
+                                   FontSize="10" Margin="1,0"/>
                         <Border x:Name="BtnLangEn" CornerRadius="3" Padding="10,3" Cursor="Hand"
                                 BorderThickness="1" MouseLeftButtonUp="BtnLangEn_Click">
                             <TextBlock x:Name="TbLangEn" Text="EN" FontSize="10" FontWeight="Bold"/>
                         </Border>
+
+                        <Rectangle Width="1" Height="14" Fill="#15E8C881" Margin="8,0"/>
+
+                        <!-- Minimize -->
+                        <Border x:Name="BtnMin" CornerRadius="3" Padding="10,3" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0"
+                                MouseLeftButtonUp="BtnMin_Click"
+                                MouseEnter="BtnChromeBtn_MouseEnter"
+                                MouseLeave="BtnChromeBtn_MouseLeave">
+                            <TextBlock Text="─" FontSize="11" Foreground="#60E8C881"
+                                       VerticalAlignment="Center" IsHitTestVisible="False"/>
+                        </Border>
+
+                        <!-- Close -->
+                        <Border x:Name="BtnClose" CornerRadius="3" Padding="10,3" Cursor="Hand"
+                                Background="Transparent" BorderThickness="0"
+                                MouseLeftButtonUp="BtnClose_Click"
+                                MouseEnter="BtnCloseChromeBtn_MouseEnter"
+                                MouseLeave="BtnChromeBtn_MouseLeave">
+                            <TextBlock Text="✕" FontSize="11" Foreground="#60E8C881"
+                                       VerticalAlignment="Center" IsHitTestVisible="False"/>
+                        </Border>
+
                     </StackPanel>
                 </Grid>
             </Border>
@@ -405,42 +211,52 @@
                         <TextBlock x:Name="TbLastPatch" Foreground="#7BE8C881"
                                    VerticalAlignment="Center" FontSize="11" FontFamily="Consolas"/>
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="4,4,4,0">
+                        <Button x:Name="BtnVerify" Content="{DynamicResource BtnVerifyStr}"
+                                Click="BtnVerify_Click" ToolTip="{DynamicResource TipVerify}"/>
+                        <Button x:Name="BtnExtract" Content="{DynamicResource BtnExtractStr}"
+                                Click="BtnExtract_Click" ToolTip="{DynamicResource TipExtract}"/>
+                    </StackPanel>
                 </StackPanel>
             </GroupBox>
 
-            <!-- ── Impostazioni ──────────────────────────────────── -->
-            <GroupBox Grid.Row="4" Header="{DynamicResource GbSettings}">
+            <!-- ── SAH Crypt ──────────────────────────────────── -->
+            <GroupBox Grid.Row="4" Header="{DynamicResource GbSahCrypt}">
                 <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Label Grid.Column="0" Content="{DynamicResource LblSahKey}"/>
-                        <TextBox Grid.Column="1" x:Name="TbSahKey" FontFamily="Consolas" FontSize="10"
-                                 ToolTip="{DynamicResource TipSahKey}"/>
-                        <Button Grid.Column="2" Content="{DynamicResource BtnReadKey}"
-                                Click="BtnReadKey_Click"
-                                ToolTip="{DynamicResource TipReadKey}"/>
-                        <Button Grid.Column="3" Content="{DynamicResource BtnSaveSettings}"
-                                Click="BtnSaveSettings_Click"/>
+                        <Label Grid.Column="0" Content="{DynamicResource LblSahFile}"/>
+                        <TextBox Grid.Column="1" x:Name="TbSahFile"
+                                 FontFamily="Consolas" FontSize="10"
+                                 AllowDrop="True"
+                                 Drop="TbSahFile_Drop"
+                                 DragOver="TbSahFile_DragOver"
+                                 ToolTip="{DynamicResource TipSahFile}"/>
+                        <Button Grid.Column="2" Content="{DynamicResource BtnBrowse}"
+                                Click="BtnSahBrowse_Click"/>
+                        <Button Grid.Column="4" x:Name="BtnEncryptSah"
+                                Content="{DynamicResource BtnEncryptSahStr}"
+                                Click="BtnEncryptSah_Click"
+                                ToolTip="{DynamicResource TipEncryptSah}"
+                                FontWeight="SemiBold"
+                                Background="#18E8C881" BorderBrush="#7BE8C881"/>
+                        <Button Grid.Column="5" x:Name="BtnDecryptSah"
+                                Content="{DynamicResource BtnDecryptSahStr}"
+                                Click="BtnDecryptSah_Click"
+                                ToolTip="{DynamicResource TipDecryptSah}"
+                                FontWeight="SemiBold"
+                                Background="#18E8C881" BorderBrush="#7BE8C881"/>
                     </Grid>
-                    <Grid Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Label Grid.Column="0" Content="{DynamicResource LblPatchesPath}"/>
-                        <TextBox Grid.Column="1" x:Name="TbSshPatchesPath" FontSize="10"
-                                 ToolTip="{DynamicResource TipPatchesPath}"/>
-                        <Label Grid.Column="2" Content="{DynamicResource LblHtdocsPath}"/>
-                        <TextBox Grid.Column="3" x:Name="TbSshHtdocsPath" FontSize="10"
-                                 ToolTip="{DynamicResource TipHtdocsPath}"/>
-                    </Grid>
+                    <TextBlock x:Name="TbSahCryptStatus" Margin="4,4,4,0"
+                               FontSize="10" TextWrapping="Wrap"
+                               Foreground="#50E8C881"/>
                 </StackPanel>
             </GroupBox>
 
@@ -458,7 +274,11 @@
                              FontFamily="Consolas" FontSize="11"
                              TextWrapping="NoWrap"
                              Background="#06060A" Foreground="#AADDE0E0"
-                             BorderThickness="0" Padding="6,6"/>
+                             BorderThickness="0" Padding="6,6">
+                        <TextBox.Resources>
+                            <Style TargetType="ScrollBar" BasedOn="{StaticResource GoldScrollBar}"/>
+                        </TextBox.Resources>
+                    </TextBox>
                     <Button Grid.Row="1" Content="{DynamicResource BtnClearLog}"
                             HorizontalAlignment="Right"
                             Click="BtnClearLog_Click" Margin="2,4,2,0"/>
@@ -466,5 +286,5 @@
             </GroupBox>
 
         </Grid>
-    </Grid>
+    </Border>
 </Window>

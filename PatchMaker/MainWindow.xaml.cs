@@ -1,10 +1,13 @@
+using Ionic.Zip;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace PatchMaker
@@ -44,6 +47,21 @@ namespace PatchMaker
                 BtnConnect.Content = L.BtnConnect;
         }
 
+        // ── Custom chrome ─────────────────────────────────────────
+
+        private void DragWindow(object sender, MouseButtonEventArgs e) { try { DragMove(); } catch { } }
+
+        private void BtnMin_Click(object sender, MouseButtonEventArgs e) => WindowState = WindowState.Minimized;
+        private void BtnClose_Click(object sender, MouseButtonEventArgs e) => Close();
+
+        private static readonly SolidColorBrush _chromHover     = new SolidColorBrush(Color.FromArgb(0x22, 0xE8, 0xC8, 0x81));
+        private static readonly SolidColorBrush _chromCloseHover = new SolidColorBrush(Color.FromArgb(0x30, 0xF4, 0x6A, 0x6A));
+        private static readonly SolidColorBrush _chromTransp    = new SolidColorBrush(Colors.Transparent);
+
+        private void BtnChromeBtn_MouseEnter(object sender, MouseEventArgs e)      => ((System.Windows.Controls.Border)sender).Background = _chromHover;
+        private void BtnChromeBtn_MouseLeave(object sender, MouseEventArgs e)      => ((System.Windows.Controls.Border)sender).Background = _chromTransp;
+        private void BtnCloseChromeBtn_MouseEnter(object sender, MouseEventArgs e) => ((System.Windows.Controls.Border)sender).Background = _chromCloseHover;
+
         // ── Language switch ────────────────────────────────────────
 
         private void BtnLangIt_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -82,57 +100,27 @@ namespace PatchMaker
 
         private void LoadSettingsToUI()
         {
-            TbSshHost.Text        = _settings.SshHost;
-            TbSshUser.Text        = _settings.SshUser;
-            PbSshPass.Password    = _settings.SshPassword;
-            TbSshPatchesPath.Text = _settings.SshPatchesPath;
-            TbSshHtdocsPath.Text  = _settings.SshHtdocsPath;
-            TbWorkspace.Text      = _settings.ResolvedWorkspace;
-            TbSahKey.Text         = _settings.SahKeyHex;
+            TbSshHost.Text     = _settings.SshHost;
+            TbSshUser.Text     = _settings.SshUser;
+            PbSshPass.Password = _settings.SshPassword;
+            TbWorkspace.Text   = _settings.ResolvedWorkspace;
         }
 
         private void SaveSettingsFromUI()
         {
-            _settings.SshHost        = TbSshHost.Text.Trim();
-            _settings.SshUser        = TbSshUser.Text.Trim();
-            _settings.SshPassword    = PbSshPass.Password;
-            _settings.SshPatchesPath = TbSshPatchesPath.Text.Trim();
-            _settings.SshHtdocsPath  = TbSshHtdocsPath.Text.Trim();
-            _settings.WorkspacePath  = TbWorkspace.Text.Trim();
-            _settings.SahKeyHex      = TbSahKey.Text.Trim();
+            _settings.SshHost       = TbSshHost.Text.Trim();
+            _settings.SshUser       = TbSshUser.Text.Trim();
+            _settings.SshPassword   = PbSshPass.Password;
+            _settings.WorkspacePath = TbWorkspace.Text.Trim();
             _settings.Save();
         }
 
-        private void BtnSaveSettings_Click(object sender, RoutedEventArgs e)
+        private void BtnSettings_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             SaveSettingsFromUI();
-            Log(L.SettingsSaved);
-        }
-
-        private async void BtnReadKey_Click(object sender, RoutedEventArgs e)
-        {
-            if (_ssh != null && _ssh.IsConnected)
-            {
-                string remotePath = PatchMakerSettings.DefaultGmSecurityServerPath;
-                Log(L.ReadingGmSec(remotePath));
-                string content = null;
-                await RunAsync(() => { content = _ssh.ReadTextFile(remotePath); });
-                if (content != null)
-                {
-                    string k = PatchMakerSettings.ParseKeyFromIniContent(content);
-                    if (k != null) { TbSahKey.Text = k; Log(L.KeyReadFromServer(k.Length)); return; }
-                    Log(L.ErrKeyNotFoundServer);
-                    return;
-                }
-                Log(L.SshReadFailed);
-            }
-
-            var dlg = new OpenFileDialog { Filter = "INI files|*.ini|All files|*.*" };
-            if (dlg.ShowDialog() != true) return;
-            string key = PatchMakerSettings.ReadKeyFromGmSecurityIni(dlg.FileName);
-            if (key == null) { Log(L.ErrKeyNotFoundLocal(dlg.FileName)); return; }
-            TbSahKey.Text = key;
-            Log(L.KeyReadFromFile(Path.GetFileName(dlg.FileName), key.Length));
+            var win = new SettingsWindow(_settings, _ssh) { Owner = this };
+            if (win.ShowDialog() == true)
+                Log(L.SettingsSaved);
         }
 
         // ── Workspace ─────────────────────────────────────────────
@@ -245,11 +233,12 @@ namespace PatchMaker
                 SaveSettingsFromUI();
                 string workspace = TbWorkspace.Text.Trim();
                 string desc      = TbPatchDesc.Text.Trim();
-                string sahKeyHex = TbSahKey.Text.Trim();
-                string deleteLst = ChkDeleteLst.IsChecked == true ? TbDeleteLst.Text : null;
+                bool   encryptSah = _settings.EncryptSah;
+                string sahKeyHex  = encryptSah ? _settings.SahKeyHex : null;
+                string deleteLst  = ChkDeleteLst.IsChecked == true ? TbDeleteLst.Text : null;
 
-                if (string.IsNullOrWhiteSpace(desc))      { Log(L.ErrDescRequired);  return; }
-                if (string.IsNullOrWhiteSpace(sahKeyHex)) { Log(L.ErrKeyRequired);   return; }
+                if (string.IsNullOrWhiteSpace(desc)) { Log(L.ErrDescRequired); return; }
+                if (encryptSah && string.IsNullOrWhiteSpace(sahKeyHex)) { Log(L.ErrKeyRequired); return; }
 
                 int patchNum = await ResolvePatchNumber();
                 Log(L.PatchNumber(patchNum));
@@ -258,7 +247,7 @@ namespace PatchMaker
                 await RunAsync(() =>
                 {
                     var builder = new PatchBuilder(Log);
-                    patchPath = builder.Build(workspace, patchNum, desc, sahKeyHex, deleteLst);
+                    patchPath = builder.Build(workspace, patchNum, desc, sahKeyHex, deleteLst, encryptSah);
                 });
 
                 if (patchPath != null)
@@ -305,6 +294,254 @@ namespace PatchMaker
 
             Log(L.SshAutoNotConnected);
             return 1;
+        }
+
+        // ── Verifica Patch ────────────────────────────────────────
+
+        private async void BtnVerify_Click(object sender, RoutedEventArgs e)
+        {
+            string patchPath = _lastPatchPath;
+            if (string.IsNullOrWhiteSpace(patchPath) || !File.Exists(patchPath))
+            {
+                var dlg = new OpenFileDialog { Filter = "Patch files|*.patch|ZIP files|*.zip|All files|*.*" };
+                if (dlg.ShowDialog() != true) return;
+                patchPath = dlg.FileName;
+            }
+
+            string sahKeyHex = _settings.SahKeyHex;
+
+            BtnVerify.IsEnabled = false;
+            await RunAsync(() => VerifyPatch(patchPath, sahKeyHex));
+            BtnVerify.IsEnabled = true;
+        }
+
+        private void VerifyPatch(string patchPath, string sahKeyHex)
+        {
+            Log(L.VerifyStart(Path.GetFileName(patchPath)));
+
+            byte[] key = EsahEncryptor.ParseHexKey(sahKeyHex);
+
+            byte[] esahBytes = null;
+            using (var zip = ZipFile.Read(patchPath))
+            {
+                ZipEntry sahEntry = null;
+                foreach (ZipEntry ze in zip.Entries)
+                {
+                    if (ze.FileName.EndsWith("update.sah", StringComparison.OrdinalIgnoreCase))
+                    { sahEntry = ze; break; }
+                }
+                if (sahEntry == null) { Log(L.VerifyNoSah); return; }
+
+                using (var ms = new MemoryStream())
+                {
+                    sahEntry.Extract(ms);
+                    esahBytes = ms.ToArray();
+                }
+            }
+
+            byte[] sahBytes;
+            if (EsahEncryptor.IsEsah(esahBytes))
+            {
+                Log(L.VerifyDecrypting);
+                sahBytes = EsahDecryptor.Decrypt(esahBytes, key);
+            }
+            else if (EsahEncryptor.IsPlainSah(esahBytes))
+            {
+                sahBytes = esahBytes;
+            }
+            else
+            {
+                Log(L.VerifyBadMagic);
+                return;
+            }
+
+            if (!EsahEncryptor.IsPlainSah(sahBytes)) { Log(L.VerifyDecryptFailed); return; }
+
+            List<SahEntry> entries = SahParser.Parse(sahBytes);
+            Log(L.VerifyOk(entries.Count));
+            foreach (SahEntry entry in entries)
+            {
+                string sizeStr = entry.Size >= 1024
+                    ? $"{entry.Size / 1024} KB"
+                    : $"{entry.Size} B";
+                Log($"  {entry.Path}  [{sizeStr}]");
+            }
+        }
+
+        private async void BtnExtract_Click(object sender, RoutedEventArgs e)
+        {
+            string patchPath = _lastPatchPath;
+            if (string.IsNullOrWhiteSpace(patchPath) || !File.Exists(patchPath))
+            {
+                var dlg = new OpenFileDialog { Filter = "Patch files|*.patch|ZIP files|*.zip|All files|*.*" };
+                if (dlg.ShowDialog() != true) return;
+                patchPath = dlg.FileName;
+            }
+
+            string sahKeyHex = _settings.SahKeyHex;
+
+            BtnExtract.IsEnabled = false;
+            await RunAsync(() => ExtractPatch(patchPath, sahKeyHex));
+            BtnExtract.IsEnabled = true;
+        }
+
+        private void ExtractPatch(string patchPath, string sahKeyHex)
+        {
+            string outDir = Path.Combine(
+                Path.GetDirectoryName(patchPath),
+                Path.GetFileNameWithoutExtension(patchPath));
+
+            Log(L.ExtractStart(Path.GetFileName(patchPath), outDir));
+            Directory.CreateDirectory(outDir);
+
+            using (var zip = ZipFile.Read(patchPath))
+            {
+                foreach (ZipEntry ze in zip.Entries)
+                    ze.Extract(outDir, ExtractExistingFileAction.OverwriteSilently);
+            }
+
+            string sahFile = Path.Combine(outDir, "update.sah");
+            if (!File.Exists(sahFile)) { Log(L.ExtractNoSah); return; }
+
+            byte[] data = File.ReadAllBytes(sahFile);
+            if (EsahEncryptor.IsEsah(data))
+            {
+                Log(L.ExtractDecrypting);
+                byte[] key   = EsahEncryptor.ParseHexKey(sahKeyHex);
+                byte[] plain = EsahDecryptor.Decrypt(data, key);
+                File.WriteAllBytes(sahFile, plain);
+                Log(L.ExtractDecryptOk(plain.Length / 1024));
+            }
+            else if (EsahEncryptor.IsPlainSah(data))
+            {
+                Log(L.ExtractAlreadyPlain);
+            }
+            else
+            {
+                Log(L.VerifyBadMagic);
+                return;
+            }
+
+            Log(L.ExtractDone(outDir));
+        }
+
+        // ── SAH Crypt ─────────────────────────────────────────────
+
+        private void BtnSahBrowse_Click(object sender, RoutedEventArgs e)
+        {
+            var dlg = new OpenFileDialog { Filter = "SAH Files|*.sah|All files|*.*" };
+            if (dlg.ShowDialog() == true)
+                TbSahFile.Text = dlg.FileName;
+        }
+
+        private void TbSahFile_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
+                ? DragDropEffects.Copy
+                : DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void TbSahFile_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var files = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (files != null && files.Length > 0)
+                    TbSahFile.Text = files[0];
+            }
+        }
+
+        private async void BtnEncryptSah_Click(object sender, RoutedEventArgs e)
+        {
+            string path = TbSahFile.Text.Trim();
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            { SetSahStatus(L.ErrSelectSahFirst, true); return; }
+
+            string keyHex = _settings.SahKeyHex;
+            if (string.IsNullOrWhiteSpace(keyHex))
+            { SetSahStatus(L.ErrKeyRequiredSah, true); return; }
+
+            BtnEncryptSah.IsEnabled = BtnDecryptSah.IsEnabled = false;
+            await RunAsync(() => EncryptSahFile(path, keyHex));
+            BtnEncryptSah.IsEnabled = BtnDecryptSah.IsEnabled = true;
+        }
+
+        private async void BtnDecryptSah_Click(object sender, RoutedEventArgs e)
+        {
+            string path = TbSahFile.Text.Trim();
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            { SetSahStatus(L.ErrSelectSahFirst, true); return; }
+
+            string keyHex = _settings.SahKeyHex;
+            if (string.IsNullOrWhiteSpace(keyHex))
+            { SetSahStatus(L.ErrKeyRequiredSah, true); return; }
+
+            BtnEncryptSah.IsEnabled = BtnDecryptSah.IsEnabled = false;
+            await RunAsync(() => DecryptSahFile(path, keyHex));
+            BtnEncryptSah.IsEnabled = BtnDecryptSah.IsEnabled = true;
+        }
+
+        private void EncryptSahFile(string path, string keyHex)
+        {
+            byte[] data = File.ReadAllBytes(path);
+            if (!EsahEncryptor.IsPlainSah(data))
+            {
+                SetSahStatus(EsahEncryptor.IsEsah(data) ? L.SahAlreadyEncrypted : L.SahBadMagic, true);
+                return;
+            }
+
+            byte[] key       = EsahEncryptor.ParseHexKey(keyHex);
+            byte[] encrypted = EsahEncryptor.Encrypt(data, key);
+            string backup    = BuildSahBackupPath(path, isEncrypting: true);
+            File.WriteAllBytes(backup, data);
+            File.WriteAllBytes(path, encrypted);
+
+            string msg = L.SahEncryptOk(Path.GetFileName(path), Path.GetFileName(backup), encrypted.LongLength / 1024);
+            Log(msg);
+            SetSahStatus(msg, false);
+        }
+
+        private void DecryptSahFile(string path, string keyHex)
+        {
+            byte[] data = File.ReadAllBytes(path);
+            if (!EsahEncryptor.IsEsah(data))
+            {
+                SetSahStatus(EsahEncryptor.IsPlainSah(data) ? L.SahAlreadyPlain : L.SahBadMagic, true);
+                return;
+            }
+
+            byte[] key   = EsahEncryptor.ParseHexKey(keyHex);
+            byte[] plain = EsahDecryptor.Decrypt(data, key);
+            if (!EsahEncryptor.IsPlainSah(plain))
+            { SetSahStatus(L.SahDecryptFailed, true); return; }
+
+            string backup = BuildSahBackupPath(path, isEncrypting: false);
+            File.WriteAllBytes(backup, data);
+            File.WriteAllBytes(path, plain);
+
+            string msg = L.SahDecryptOk(Path.GetFileName(path), Path.GetFileName(backup), plain.LongLength / 1024);
+            Log(msg);
+            SetSahStatus(msg, false);
+        }
+
+        private static string BuildSahBackupPath(string path, bool isEncrypting)
+        {
+            string dir    = Path.GetDirectoryName(path) ?? ".";
+            string stem   = Path.GetFileNameWithoutExtension(path);
+            string ext    = Path.GetExtension(path);
+            string suffix = isEncrypting ? ".dec" : ".enc";
+            return Path.Combine(dir, stem + suffix + ext);
+        }
+
+        private void SetSahStatus(string msg, bool isError)
+        {
+            if (!Dispatcher.CheckAccess())
+            { Dispatcher.BeginInvoke(new Action(() => SetSahStatus(msg, isError))); return; }
+            TbSahCryptStatus.Text       = msg;
+            TbSahCryptStatus.Foreground = isError
+                ? new SolidColorBrush(Color.FromRgb(0xF4, 0x6A, 0x6A))
+                : new SolidColorBrush(Color.FromRgb(0x4D, 0xC8, 0x70));
         }
 
         // ── Log & helpers ─────────────────────────────────────────

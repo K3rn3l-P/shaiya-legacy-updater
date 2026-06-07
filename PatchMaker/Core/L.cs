@@ -94,6 +94,39 @@ namespace PatchMaker
         public static string CreatingZip(string name)    => S($"Creazione ZIP → {name}", $"Creating ZIP → {name}");
         public static string PatchDone(string name, long kb) => $"✓ Patch: {name} ({kb} KB)";
 
+        // ── Verifica patch ───────────────────────────────────────
+        public static string VerifyStart(string name)  => S($"Verifica patch: {name}", $"Verifying patch: {name}");
+        public static string VerifyNoSah               => S("ERRORE: update.sah non trovato nel .patch.", "ERROR: update.sah not found in .patch file.");
+        public static string VerifyBadMagic            => S("ERRORE: update.sah non è ESAH né SAH valido.", "ERROR: update.sah is neither valid ESAH nor SAH.");
+        public static string VerifyDecrypting          => S("Decifratura ESAH AES-256-GCM...", "Decrypting ESAH AES-256-GCM...");
+        public static string VerifyDecryptFailed       => S("ERRORE: decifratura fallita — chiave errata?  NTSTATUS=0xC000A002 = tag mismatch.", "ERROR: decryption failed — wrong key?  NTSTATUS=0xC000A002 = tag mismatch.");
+        public static string VerifyOk(int n)           => S($"✓ SAH valido — {n} file:", $"✓ Valid SAH — {n} files:");
+
+        // ── Estrai patch ──────────────────────────────────────────
+        public static string ExtractStart(string name, string dir)  => S($"Estrazione {name} → {dir}", $"Extracting {name} → {dir}");
+        public static string ExtractNoSah                           => S("ERRORE: update.sah non trovato dopo estrazione.", "ERROR: update.sah not found after extraction.");
+        public static string ExtractDecrypting                      => S("Decifratura update.sah (ESAH → SAH)...", "Decrypting update.sah (ESAH → SAH)...");
+        public static string ExtractDecryptOk(long kb)              => S($"✓ update.sah decifrato ({kb} KB, plain SAH).", $"✓ update.sah decrypted ({kb} KB, plain SAH).");
+        public static string ExtractAlreadyPlain                    => S("update.sah è già plain SAH (non cifrato).", "update.sah is already plain SAH (not encrypted).");
+        public static string ExtractDone(string dir)                => S($"✓ Estrazione completata: {dir}", $"✓ Extraction complete: {dir}");
+
+        // ── SAH Crypt ─────────────────────────────────────────────
+        public static string ErrSelectSahFirst   => S("Selezionare prima un file .sah.", "Select a .sah file first.");
+        public static string ErrKeyRequiredSah   => S("Chiave SAH non impostata — aprire ⚙ Impostazioni.", "SAH key not configured — open ⚙ Settings.");
+        public static string SahAlreadyEncrypted => S("File già cifrato (ESAH) — usare Decifra prima.", "File already encrypted (ESAH) — use Decrypt first.");
+        public static string SahAlreadyPlain     => S("File già in chiaro (SAH) — usare Cifra prima.", "File already plain SAH — use Encrypt first.");
+        public static string SahBadMagic         => S("File non riconosciuto (né SAH né ESAH).", "File not recognized (neither SAH nor ESAH).");
+        public static string SahDecryptFailed    => S("Decifratura fallita — chiave errata?", "Decryption failed — wrong key?");
+        public static string SahEncryptOk(string file, string backup, long kb) => S(
+            $"✔ Cifrato: {file}  ·  backup → {backup}  ({kb} KB)",
+            $"✔ Encrypted: {file}  ·  backup → {backup}  ({kb} KB)");
+        public static string SahDecryptOk(string file, string backup, long kb) => S(
+            $"✔ Decifrato: {file}  ·  backup → {backup}  ({kb} KB)",
+            $"✔ Decrypted: {file}  ·  backup → {backup}  ({kb} KB)");
+
+        // ── PatchBuilder mode ────────────────────────────────────
+        public static string SahPlainMode => S("SAH non cifrato (modalità plain).", "SAH not encrypted (plain mode).");
+
         // ── Exception messages (SahSafBuilder / PatchBuilder) ────
         public static string ErrDataDirNotFound(string p) => S($"Cartella data/ non trovata: {p}", $"data/ folder not found: {p}");
         public static string ErrSahInvalid               => S("SAH generato non valido (magic SAH mancante).", "Generated SAH is invalid (SAH magic missing).");

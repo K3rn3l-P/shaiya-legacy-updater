@@ -10,7 +10,7 @@ namespace PatchMaker
 
         public PatchBuilder(Action<string> log) { _log = log; }
 
-        public string Build(string workspacePath, int patchNumber, string description, string sahKeyHex, string deleteLstContent)
+        public string Build(string workspacePath, int patchNumber, string description, string sahKeyHex, string deleteLstContent, bool encryptSah = true)
         {
             string dataDir = Path.Combine(workspacePath, "data");
             string outDir  = Path.Combine(workspacePath, "output");
@@ -32,14 +32,24 @@ namespace PatchMaker
             string updateSah = Path.Combine(workspacePath, "update.sah");
             string updateSaf = Path.Combine(workspacePath, "update.saf");
 
-            Log(L.EncryptingSah);
             byte[] plainSah = File.ReadAllBytes(rawSahPath);
             if (!EsahEncryptor.IsPlainSah(plainSah))
                 throw new InvalidDataException(L.ErrSahInvalid);
-            byte[] key  = EsahEncryptor.ParseHexKey(sahKeyHex);
-            byte[] esah = EsahEncryptor.Encrypt(plainSah, key);
-            File.WriteAllBytes(updateSah, esah);
-            Log(L.UpdateSahSize(esah.Length / 1024));
+
+            if (encryptSah)
+            {
+                Log(L.EncryptingSah);
+                byte[] key  = EsahEncryptor.ParseHexKey(sahKeyHex);
+                byte[] esah = EsahEncryptor.Encrypt(plainSah, key);
+                File.WriteAllBytes(updateSah, esah);
+                Log(L.UpdateSahSize(esah.Length / 1024));
+            }
+            else
+            {
+                Log(L.SahPlainMode);
+                File.WriteAllBytes(updateSah, plainSah);
+                Log(L.UpdateSahSize(plainSah.Length / 1024));
+            }
 
             File.Copy(rawSafPath, updateSaf, overwrite: true);
             Log(L.UpdateSafSize(new FileInfo(updateSaf).Length / 1024));

@@ -32,6 +32,8 @@
     <sys:String x:Key="BtnReadKey">Read from GMSecurity.ini...</sys:String>
     <sys:String x:Key="BtnSaveSettings">Save settings</sys:String>
     <sys:String x:Key="BtnClearLog">Clear log</sys:String>
+    <sys:String x:Key="BtnVerifyStr">⊙  Verify .patch</sys:String>
+    <sys:String x:Key="BtnExtractStr">↓  Extract .patch</sys:String>
 
     <!-- CheckBox -->
     <sys:String x:Key="ChkDeleteLstContent">Include delete.lst  (loose client files only — NOT files inside data.sah/saf)</sys:String>
@@ -47,6 +49,24 @@
     <sys:String x:Key="TipReadKey">If SSH connected: reads from server (C:/ShaiyaServer/PSM_Client/Bin/Data/GMSecurity.ini). Otherwise: opens local file.</sys:String>
     <sys:String x:Key="TipPatchesPath">SFTP path where .patch files are uploaded on the server</sys:String>
     <sys:String x:Key="TipHtdocsPath">SFTP path of the web root (where manifest.json lives)</sys:String>
+    <sys:String x:Key="TipVerify">Decrypts update.sah from the .patch and lists its files. Uses the last generated patch or opens a file picker.</sys:String>
+    <sys:String x:Key="TipExtract">Extracts the .patch to a folder with the same name and decrypts update.sah → plain SAH. update.saf is extracted as-is.</sys:String>
+
+    <!-- Settings window -->
+    <sys:String x:Key="SettingsTitle">Settings</sys:String>
+    <sys:String x:Key="GbSahKey">SAH KEY</sys:String>
+    <sys:String x:Key="GbPaths">SERVER PATHS</sys:String>
+    <sys:String x:Key="ChkEncryptContent">Encrypt update.sah (AES-256-GCM)</sys:String>
+    <sys:String x:Key="BtnCancel">Cancel</sys:String>
+
+    <!-- SAH Crypt panel -->
+    <sys:String x:Key="GbSahCrypt">SAH CRYPT</sys:String>
+    <sys:String x:Key="LblSahFile">File .sah:</sys:String>
+    <sys:String x:Key="BtnEncryptSahStr">🔒  Encrypt SAH</sys:String>
+    <sys:String x:Key="BtnDecryptSahStr">🔓  Decrypt SAH</sys:String>
+    <sys:String x:Key="TipSahFile">Path to the data.sah file to encrypt or decrypt. Drag &amp; drop or use Browse.</sys:String>
+    <sys:String x:Key="TipEncryptSah">Encrypt data.sah (plain SAH → ESAH AES-256-GCM). Original file is saved as data.dec.sah (backup).</sys:String>
+    <sys:String x:Key="TipDecryptSah">Decrypt data.sah (ESAH → plain SAH). Encrypted file is saved as data.enc.sah (backup).</sys:String>
 
     <!-- Header -->
     <sys:String x:Key="AppSubtitle">Shaiya Patch Tool</sys:String>

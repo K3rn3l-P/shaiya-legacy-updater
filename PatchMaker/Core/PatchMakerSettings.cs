@@ -15,8 +15,9 @@ namespace PatchMaker
         public string SshPatchesPath { get; set; } = "/C:/xampp/htdocs/Updater/Patches";
         public string SshHtdocsPath { get; set; } = "/C:/xampp/htdocs/Updater";
         public string WorkspacePath { get; set; } = "";
-        public string SahKeyHex { get; set; } = "";
-        public string Language  { get; set; } = "It";
+        public string SahKeyHex  { get; set; } = "";
+        public bool   EncryptSah { get; set; } = true;
+        public string Language   { get; set; } = "It";
 
         public string ResolvedWorkspace =>
             string.IsNullOrWhiteSpace(WorkspacePath)
@@ -43,8 +44,9 @@ namespace PatchMaker
                         case "SshPatchesPath": s.SshPatchesPath = val; break;
                         case "SshHtdocsPath":  s.SshHtdocsPath  = val; break;
                         case "WorkspacePath":  s.WorkspacePath  = val; break;
-                        case "SahKeyHex":      s.SahKeyHex      = val; break;
-                        case "Language":       s.Language       = val; break;
+                        case "SahKeyHex":  s.SahKeyHex  = val; break;
+                        case "EncryptSah": s.EncryptSah = !val.Equals("False", StringComparison.OrdinalIgnoreCase); break;
+                        case "Language":   s.Language   = val; break;
                     }
                 }
             }
@@ -64,8 +66,9 @@ namespace PatchMaker
                     "SshPatchesPath=" + SshPatchesPath,
                     "SshHtdocsPath="  + SshHtdocsPath,
                     "WorkspacePath="  + WorkspacePath,
-                    "SahKeyHex="      + SahKeyHex,
-                    "Language="       + Language,
+                    "SahKeyHex="  + SahKeyHex,
+                    "EncryptSah=" + EncryptSah,
+                    "Language="   + Language,
                 });
             }
             catch { }

@@ -1,0 +1,124 @@
+<Window x:Class="PatchMaker.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource SettingsTitle}"
+        Width="620" Height="290" MinWidth="540"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        FontFamily="Segoe UI"
+        Foreground="#E0E0E0"
+        FontSize="12">
+
+    <Border CornerRadius="8" BorderBrush="#4DE8C881" BorderThickness="1" ClipToBounds="True">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#0D0D10" Offset="0"/>
+                <GradientStop Color="#070709" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+        <Border.Effect>
+            <DropShadowEffect Color="#E8C881" BlurRadius="24" ShadowDepth="0" Opacity="0.15"/>
+        </Border.Effect>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Title bar -->
+            <Border Grid.Row="0" Padding="16,8"
+                    BorderBrush="#2DE8C881" BorderThickness="0,0,0,1"
+                    Background="#0F0F14">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                MouseLeftButtonDown="DragWindow">
+                        <TextBlock Text="{DynamicResource SettingsTitle}"
+                                   Foreground="#E8C881" FontSize="13" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="  ·  by K3rn3l" Foreground="#28E8C881"
+                                   FontSize="10" VerticalAlignment="Center" FontStyle="Italic"/>
+                    </StackPanel>
+                    <Border x:Name="BtnClose" HorizontalAlignment="Right"
+                            CornerRadius="3" Padding="10,3" Cursor="Hand"
+                            Background="Transparent" BorderThickness="0"
+                            MouseLeftButtonUp="BtnClose_Click"
+                            MouseEnter="BtnCloseChromeBtn_MouseEnter"
+                            MouseLeave="BtnChromeBtn_MouseLeave">
+                        <TextBlock Text="✕" FontSize="11" Foreground="#60E8C881"
+                                   VerticalAlignment="Center" IsHitTestVisible="False"/>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Content -->
+            <Grid Grid.Row="1" Margin="16,12,16,14">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- SAH Key -->
+                <GroupBox Grid.Row="0" Header="{DynamicResource GbSahKey}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="0" x:Name="ChkEncrypt"
+                                  Content="{DynamicResource ChkEncryptContent}"
+                                  VerticalAlignment="Center" Margin="0,0,10,0"
+                                  Checked="ChkEncrypt_Changed" Unchecked="ChkEncrypt_Changed"/>
+                        <TextBox Grid.Column="1" x:Name="TbSahKey"
+                                 FontFamily="Consolas" FontSize="10"
+                                 ToolTip="{DynamicResource TipSahKey}"/>
+                        <Button Grid.Column="2" x:Name="BtnReadKey"
+                                Content="{DynamicResource BtnReadKey}"
+                                Click="BtnReadKey_Click"
+                                ToolTip="{DynamicResource TipReadKey}"/>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Paths -->
+                <GroupBox Grid.Row="1" Header="{DynamicResource GbPaths}" Margin="0,4,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Label Grid.Column="0" Content="{DynamicResource LblPatchesPath}"/>
+                        <TextBox Grid.Column="1" x:Name="TbSshPatchesPath" FontSize="10"
+                                 ToolTip="{DynamicResource TipPatchesPath}"/>
+                        <Label Grid.Column="2" Content="{DynamicResource LblHtdocsPath}"/>
+                        <TextBox Grid.Column="3" x:Name="TbSshHtdocsPath" FontSize="10"
+                                 ToolTip="{DynamicResource TipHtdocsPath}"/>
+                    </Grid>
+                </GroupBox>
+
+                <!-- Status -->
+                <TextBlock Grid.Row="2" x:Name="TbStatus" Margin="4,6,4,0"
+                           FontSize="10" Foreground="#60E8C881" TextWrapping="Wrap"/>
+
+                <!-- Buttons -->
+                <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                    <Button x:Name="BtnSave" Click="BtnSave_Click"
+                            Content="{DynamicResource BtnSaveSettings}"
+                            Background="#18E8C881" BorderBrush="#7BE8C881" FontWeight="SemiBold"/>
+                    <Button x:Name="BtnCancel" Click="BtnCancel_Click"
+                            Content="{DynamicResource BtnCancel}"/>
+                </StackPanel>
+
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
