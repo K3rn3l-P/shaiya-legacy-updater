@@ -17,6 +17,7 @@ namespace PatchMaker
         private PatchMakerSettings _settings;
         private SshService _ssh;
         private string _lastPatchPath;
+        private byte[] _lastPlainSah;
 
         public MainWindow()
         {
@@ -243,16 +244,19 @@ namespace PatchMaker
                 int patchNum = await ResolvePatchNumber();
                 Log(L.PatchNumber(patchNum));
 
-                string patchPath = null;
+                string patchPath   = null;
+                byte[] plainSah    = null;
                 await RunAsync(() =>
                 {
                     var builder = new PatchBuilder(Log);
                     patchPath = builder.Build(workspace, patchNum, desc, patchKeyHex, deleteLst, encryptSah);
+                    plainSah  = builder.LastPlainSah;
                 });
 
                 if (patchPath != null)
                 {
                     _lastPatchPath = patchPath;
+                    _lastPlainSah  = plainSah;
                     TbLastPatch.Text = Path.GetFileName(patchPath) + "  (" + new FileInfo(patchPath).Length / 1024 + " KB)";
                     Log(L.PatchReady(Path.GetFileName(patchPath)));
                 }
@@ -274,7 +278,22 @@ namespace PatchMaker
             }
 
             BtnUpload.IsEnabled = false;
-            await RunAsync(() => _ssh.UploadPatch(_lastPatchPath));
+            byte[] plainSahToUpdate = _lastPlainSah;
+            await RunAsync(() =>
+            {
+                _ssh.UploadPatch(_lastPatchPath);
+                if (plainSahToUpdate != null)
+                {
+                    try
+                    {
+                        _ssh.UpdateSahToken(plainSahToUpdate, _settings.GmSecurityIniPath, _settings.PsLoginServiceName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(L.SahTokenUpdateFailed(ex.Message));
+                    }
+                }
+            });
             BtnUpload.IsEnabled = true;
         }
 

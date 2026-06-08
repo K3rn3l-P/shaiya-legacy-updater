@@ -20,6 +20,10 @@ namespace PatchMaker
         public bool   EncryptSah   { get; set; } = true;
         public bool   EncryptPatch { get; set; } = true;
         public string Language     { get; set; } = "It";
+        public string GmSecurityIniPath  { get; set; } = DefaultGmSecurityServerPath;
+        public string PsLoginServiceName { get; set; } = "ps_login";
+        public string MasterSahPath      { get; set; } = "C:/xampp/htdocs/Updater/data_master.sah";
+        public string MasterSafSizePath  { get; set; } = "C:/xampp/htdocs/Updater/data_master.saf_size";
 
         public string ResolvedWorkspace =>
             string.IsNullOrWhiteSpace(WorkspacePath)
@@ -50,7 +54,11 @@ namespace PatchMaker
                         case "PatchKeyHex": s.PatchKeyHex = val; break;
                         case "EncryptSah":   s.EncryptSah   = !val.Equals("False", StringComparison.OrdinalIgnoreCase); break;
                         case "EncryptPatch": s.EncryptPatch = !val.Equals("False", StringComparison.OrdinalIgnoreCase); break;
-                        case "Language":     s.Language     = val; break;
+                        case "Language":         s.Language         = val; break;
+                        case "GmSecurityIniPath":  s.GmSecurityIniPath  = val; break;
+                        case "PsLoginServiceName": s.PsLoginServiceName = val; break;
+                        case "MasterSahPath":      s.MasterSahPath      = val; break;
+                        case "MasterSafSizePath":  s.MasterSafSizePath  = val; break;
                     }
                 }
             }
@@ -74,7 +82,11 @@ namespace PatchMaker
                     "PatchKeyHex=" + PatchKeyHex,
                     "EncryptSah="   + EncryptSah,
                     "EncryptPatch=" + EncryptPatch,
-                    "Language="     + Language,
+                    "Language="          + Language,
+                    "GmSecurityIniPath=" + GmSecurityIniPath,
+                    "PsLoginServiceName="+ PsLoginServiceName,
+                    "MasterSahPath="     + MasterSahPath,
+                    "MasterSafSizePath=" + MasterSafSizePath,
                 });
             }
             catch { }

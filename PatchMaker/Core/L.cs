@@ -83,6 +83,15 @@ namespace PatchMaker
         public static string ReadFileFailed(string path, string msg) => S(
             $"ReadTextFile fallito ({path}): {msg}",
             $"ReadTextFile failed ({path}): {msg}");
+        public static string SahTokenUpdating(string token) => S(
+            $"[Layer2] Aggiorno SahTokenHex → {token} sul server...",
+            $"[Layer2] Updating SahTokenHex → {token} on server...");
+        public static string SahTokenUpdated(string token) => S(
+            $"[Layer2] SahTokenHex aggiornato: {token}. ps_login riavviato.",
+            $"[Layer2] SahTokenHex updated: {token}. ps_login restarted.");
+        public static string SahTokenUpdateFailed(string msg) => S(
+            $"[Layer2] AVVISO: aggiornamento SahTokenHex fallito — {msg}",
+            $"[Layer2] WARNING: SahTokenHex update failed — {msg}");
 
         // ── PatchBuilder ─────────────────────────────────────────
         public static string AnalyzingData               => S("Analisi struttura data/...", "Analyzing data/ structure...");
@@ -94,6 +103,9 @@ namespace PatchMaker
         public static string UpdateSafSize(long kb)      => $"update.saf: {kb} KB";
         public static string CreatingZip(string name)    => S($"Creazione ZIP → {name}", $"Creating ZIP → {name}");
         public static string PatchDone(string name, long kb) => $"✓ Patch: {name} ({kb} KB)";
+        public static string SahTokenHexCalc(string token) => S(
+            $"[Layer2] SahTokenHex calcolato: {token}",
+            $"[Layer2] SahTokenHex calculated: {token}");
 
         // ── Verifica patch ───────────────────────────────────────
         public static string VerifyStart(string name)  => S($"Verifica patch: {name}", $"Verifying patch: {name}");
