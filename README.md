@@ -321,6 +321,23 @@ Expected build output lines:
 
 This keeps runtime and tool keys aligned without manual edits.
 
+## Distribuzione binario singolo (Updater.exe)
+
+Il progetto compila un singolo `Updater.exe` senza DLL esterne da distribuire.
+`Ionic.Zip.dll` è embedded nell'EXE come risorsa; `App.cs` la carica automaticamente
+tramite `AssemblyResolve` se non trovata su disco.
+
+Per aggiungere altre DLL esterne future come binario singolo, aggiungere in `Updater.csproj`:
+
+```xml
+<EmbeddedResource Include="lib\NuovaDll.dll">
+  <LogicalName>NuovaDll.dll</LogicalName>
+</EmbeddedResource>
+```
+
+E cambiare la Reference da `<Private>true</Private>` a `<Private>false</Private>`.
+Nessuna modifica al codice necessaria: `OnAssemblyResolve` in `App.cs` la carica automaticamente.
+
 ## Additional docs
 
 - `docs/INSTALL.md`
