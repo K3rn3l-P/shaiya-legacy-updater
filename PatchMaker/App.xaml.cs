@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -7,6 +8,23 @@ namespace PatchMaker
 {
     public partial class App : Application
     {
+        // Carica DLL embedded (Ionic.Zip, Renci.SshNet) se non trovate su disco.
+        // Static constructor: eseguito prima di qualsiasi init WPF.
+        static App()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += (s, args) =>
+            {
+                string dllName = new AssemblyName(args.Name).Name + ".dll";
+                using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(dllName))
+                {
+                    if (stream == null) return null;
+                    var bytes = new byte[stream.Length];
+                    stream.Read(bytes, 0, bytes.Length);
+                    return Assembly.Load(bytes);
+                }
+            };
+        }
+
         private static readonly string LogPath =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "patchmaker.log");
 
