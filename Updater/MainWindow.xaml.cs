@@ -623,6 +623,13 @@ namespace Shaiya_Duff_Updater
                     UseShellExecute = false   // required to pass EnvironmentVariables
                 };
 
+                // Ensure data.safb sidecar is current before game.exe loads the VFS.
+                if (AppConfig.SahCryptEnabled && !string.IsNullOrWhiteSpace(MW.SahKeyHex))
+                    SafbSidecar.Regenerate(
+                        AppPaths.InBase("data.sah"),
+                        MW.SahKeyHex,
+                        AppPaths.InBase("data.safb"));
+
                 // Pass SAH decryption key to the child process (sdev-client reads and zeros it at DllMain).
                 // Key is received from server only after successful authentication — never stored locally.
                 if (AppConfig.SahCryptEnabled && !string.IsNullOrWhiteSpace(MW.SahKeyHex))

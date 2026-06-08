@@ -115,6 +115,24 @@ namespace Shaiya_Duff_Updater
                         MainWindow.MW.LoadAnimation.Visibility = Visibility.Hidden;
                         Updater.Continue();
 
+                        // Genera data.safb in background subito dopo login (SahKeyHex appena ricevuto).
+                        // Così è pronto prima che LaunchGameWorker parta — evita generazione lenta on-launch.
+                        if (AppConfig.SahCryptEnabled && !string.IsNullOrEmpty(response.sahKey))
+                        {
+                            string sahKey = response.sahKey;
+                            System.Threading.Tasks.Task.Run(() =>
+                            {
+                                try
+                                {
+                                    SafbSidecar.Regenerate(
+                                        AppPaths.InBase("data.sah"),
+                                        sahKey,
+                                        AppPaths.InBase("data.safb"));
+                                }
+                                catch { }
+                            });
+                        }
+
                         if (saveAccount && !string.IsNullOrEmpty(MainWindow.MW.UserID))
                         {
                             LocalAccountStore.Add(MainWindow.MW.UserID);

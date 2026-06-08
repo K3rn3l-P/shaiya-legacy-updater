@@ -51,6 +51,11 @@ namespace Shaiya_Duff_Updater
             {
                 if (progress != null) progress(0);
                 ApplySahPatch(updateSah, updateSaf, tx);
+                if (AppConfig.SahCryptEnabled)
+                    SafbSidecar.Regenerate(
+                        AppPaths.InBase("data.sah"),
+                        AppConfig.SahCryptKeyHex,
+                        AppPaths.InBase("data.safb"));
                 if (progress != null) progress(50);
                 CopyPatchFiles(extractedDir, AppPaths.BaseDirectory, tx, delegate(int pct) { if (progress != null) progress(50 + pct / 2); });
             }

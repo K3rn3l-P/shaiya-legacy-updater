@@ -129,6 +129,7 @@
     <Compile Include="Update\PatchPathUtil.cs" />
     <Compile Include="Update\PatchTransaction.cs" />
     <Compile Include="Update\RepairService.cs" />
+    <Compile Include="Update\SafbSidecar.cs" />
     <Compile Include="Update\SahCrypt.cs" />
     <Compile Include="Update\VersionStore.cs" />
     <Compile Include="Updater.cs" />
