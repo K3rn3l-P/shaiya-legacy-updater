@@ -24,10 +24,14 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <UpdateUrl>\\10.10.19.2\wd-p\Media\syncthing\Repo\shaiya-legacy-updater\PatchMaker\bin\Release\app.publish\</UpdateUrl>
-    <ApplicationRevision>4</ApplicationRevision>
+    <UpdateUrl>\\10.10.19.2\wd-p\Media\syncthing\Repo\shaiya-legacy-updater\bin\publish\</UpdateUrl>
+    <ProductName>PatchMaker</ProductName>
+    <PublisherName>k3rn3l</PublisherName>
+    <SuiteName>tools</SuiteName>
+    <ApplicationRevision>7</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
+    <CreateDesktopShortcut>true</CreateDesktopShortcut>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -57,6 +61,16 @@
   </PropertyGroup>
   <PropertyGroup>
     <SignManifests>true</SignManifests>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <!-- SSH.NET 2020.0.1 — net40 build, nessuna dipendenza esterna -->
@@ -147,6 +161,9 @@
     <EmbeddedResource Include="..\Updater\lib\Ionic.Zip.dll">
       <LogicalName>Ionic.Zip.dll</LogicalName>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="icon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
