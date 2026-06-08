@@ -10,8 +10,6 @@ namespace PatchMaker
 
         public PatchBuilder(Action<string> log) { _log = log; }
 
-        public string LastSahTokenHex { get; private set; }
-        public byte[] LastPlainSah    { get; private set; }
 
         public string Build(string workspacePath, int patchNumber, string description, string sahKeyHex, string deleteLstContent, bool encryptSah = true)
         {
@@ -38,8 +36,6 @@ namespace PatchMaker
             byte[] plainSah = File.ReadAllBytes(rawSahPath);
             if (!EsahEncryptor.IsPlainSah(plainSah))
                 throw new InvalidDataException(L.ErrSahInvalid);
-
-            LastPlainSah = plainSah;
 
             if (encryptSah)
             {

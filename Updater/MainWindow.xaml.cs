@@ -662,7 +662,11 @@ namespace Shaiya_Duff_Updater
                 {
                     try { Process.GetProcessById(processId).Kill(); } catch { }
                 }
+#if DEBUG
                 string uiMsg = ex is InvalidOperationException ? ex.Message : "Please check updater.log and try again.";
+#else
+                string uiMsg = "The game could not be started. Please restart the updater or contact support.";
+#endif
                 ShowLaunchFailed("Launch failed", uiMsg);
             }
             finally
@@ -781,9 +785,29 @@ namespace Shaiya_Duff_Updater
             {
                 pointer = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, GameOffsets.LoginPointer, 4), 0);
                 if (pointer != 0) break;
+                if (i % 25 == 0)
+                {
+                    bool alive = false;
+                    try { alive = !Process.GetProcessById(processId).HasExited; } catch { }
+                    AppLogger.Debug("launch", "Waiting login ptr... attempt=" + (i + 1) + "/150 ptr=0x"
+                        + pointer.ToString("X8") + " alive=" + alive
+                        + " offset=0x" + GameOffsets.LoginPointer.ToString("X8"));
+                    if (!alive)
+                        throw new InvalidOperationException(
+                            "Game process exited while waiting for login screen (attempt " + (i + 1)
+                            + "). Possible causes: SAFB HMAC mismatch, ESAH decrypt fail, or missing DLL.");
+                }
                 Thread.Sleep(200);
             }
-            if (pointer == 0) throw new InvalidOperationException("Game login buffer pointer was not initialized.");
+            if (pointer == 0)
+            {
+                bool alive = false;
+                try { alive = !Process.GetProcessById(processId).HasExited; } catch { }
+                throw new InvalidOperationException(
+                    "Game login screen did not initialize after 30s. "
+                    + "ptr@0x" + GameOffsets.LoginPointer.ToString("X8") + "=0 alive=" + alive
+                    + ". Check: SDEV_SAH_KEY env, SAFB integrity, sdev-client.dll loaded.");
+            }
 
             AppLogger.Debug("launch", "Login pointer initialized. address=0x" + pointer.ToString("X8"));
 
