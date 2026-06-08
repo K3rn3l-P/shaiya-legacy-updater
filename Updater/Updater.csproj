@@ -48,7 +48,7 @@
   <ItemGroup>
     <Reference Include="Ionic.Zip">
       <HintPath>lib\Ionic.Zip.dll</HintPath>
-      <Private>true</Private>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="PresentationCore" />
@@ -149,6 +149,10 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx" />
+    <!-- Ionic.Zip embedded nel EXE: LogicalName = nome usato da OnAssemblyResolve -->
+    <EmbeddedResource Include="lib\Ionic.Zip.dll">
+      <LogicalName>Ionic.Zip.dll</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Page Include="account.xaml">
