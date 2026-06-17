@@ -195,6 +195,7 @@ namespace PatchMaker
             {
                 SetConnStatus(true);
                 BtnConnect.Content = L.BtnDisconnect;
+                await TryAutoRefreshKeysAsync();
             }
             else
             {
@@ -202,6 +203,20 @@ namespace PatchMaker
                 BtnConnect.Content = L.BtnConnect;
             }
             BtnConnect.IsEnabled = true;
+        }
+
+        private async Task TryAutoRefreshKeysAsync()
+        {
+            Log(L.ReadingGmSec(PatchMakerSettings.DefaultGmSecurityServerPath));
+            string content = null;
+            await RunAsync(() => { content = _ssh.ReadTextFile(PatchMakerSettings.DefaultGmSecurityServerPath); });
+            if (content == null) return;
+            var (sah, patch) = PatchMakerSettings.ParseKeysFromIniContent(content);
+            if (sah == null && patch == null) { Log(L.ErrKeyNotFoundServer); return; }
+            if (sah != null)   _settings.SahKeyHex   = sah;
+            if (patch != null) _settings.PatchKeyHex = patch;
+            _settings.Save();
+            Log(L.KeyReadFromServer(sah?.Length ?? 0, patch?.Length ?? 0));
         }
 
         private void SetConnStatus(bool connected)
