@@ -28,7 +28,7 @@
     <ProductName>PatchMaker</ProductName>
     <PublisherName>k3rn3l</PublisherName>
     <SuiteName>tools</SuiteName>
-    <ApplicationRevision>7</ApplicationRevision>
+    <ApplicationRevision>10</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <CreateDesktopShortcut>true</CreateDesktopShortcut>

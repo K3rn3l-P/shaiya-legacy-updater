@@ -104,27 +104,32 @@ Arguments=start game
 RequireOriginalClientFiles=false
 BlockPatchWhenGameRunning=true
 
+# The game ALWAYS goes through server selection now (SKIPSERVERSELECTION is no longer honored).
 AutoSelectServer=true
-AutoSelectServerDelayMs=2500
+AutoSelectServerDelayMs=800
 AutoSelectServerIndex=0
 AutoSelectServerRetries=30
 AutoSelectServerRetryDelayMs=500
-AutoSelectServerObjectMissingAssumeSkipAttempts=6
-AutoSelectRetryWhenServerListMissing=true
 AutoSelectRetryDelayMs=1200
+
+# Authoritative login gate: wait until the login server populates the server list (proof the
+# credentials were accepted) before advancing to server selection. Re-injects between attempts
+# (server list often appears only after a re-injection). Worst-case wait ~ LoginVerifyTimeoutMs
+# + LoginMaxRetries * LoginVerifyRetryTimeoutMs.
+LoginVerifyTimeoutMs=3000
+LoginVerifyRetryTimeoutMs=3000
+LoginMaxRetries=8
 
 LoginTcpPort=30800
 GameTcpPort=30810
 TcpPortTransitionDelayMs=2000
 TcpPortTransitionTimeoutMs=30000
-SkipServerSelectionTcpTimeoutMs=12000
 
 HideLoginScreens=true
 LoginOverlayText=Connecting to the server...
 LoginOverlaySubText=Preparing character selection. Please wait.
 LoginOverlayRevealDelayMs=6000
 LoginOverlayFallbackRevealDelayMs=1000
-SkipServerSelectionRevealDelayMs=2000
 LoginFlowPatchRestoreDelayMs=2000
 
 HideGameWindowUntilReady=true
@@ -249,5 +254,6 @@ Current runtime expects:
 
 - Keep `launcher.ini` and `api/config.php` server-local.
 - Replace sample SAH/ESAH keys before production.
-- If skip mode (`SKIPSERVERSELECTION=1`) is unstable, tune `SkipServerSelectionTcpTimeoutMs` first.
+- The game always goes through server selection; `SKIPSERVERSELECTION` in client `CONFIG.INI` is ignored.
+- If logins are slow to reach server selection, tune the login gate: shorter `LoginVerifyTimeoutMs`/`LoginVerifyRetryTimeoutMs` re-injects more often; raise `LoginMaxRetries` for a longer total budget.
 - `Patches` and `Files` payloads are intentionally public for launcher clients; only tooling and diagnostics are localhost-only.

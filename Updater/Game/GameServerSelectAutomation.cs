@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -61,8 +62,11 @@ namespace Shaiya_Duff_Updater
 
             string lastReason = "no-attempt";
             ServerListState lastState = new ServerListState();
-            int repeatedServerListPointerZero = 0;
 
+            // NOTE: by the time AutoSelectFirstServer runs, the caller has already confirmed via
+            // WaitForLoginReachedServerSelect that the server list is populated (login succeeded).
+            // No "server list pointer is 0" early-exit here anymore: that heuristic belonged to the
+            // removed SKIPSERVERSELECTION path and used to abort prematurely on slightly slow logins.
             for (int i = 0; i < AppConfig.AutoSelectServerRetries; i++)
             {
                 LastDecisionAttemptCount = i + 1;
@@ -73,29 +77,11 @@ namespace Shaiya_Duff_Updater
                     if (!TryGetServerListState(processId, AppConfig.AutoSelectServerIndex, out serverState, out stateReason))
                     {
                         lastReason = stateReason;
-                        AppLogger.Info("Auto server direct-select wait: server list not ready yet. Attempt=" + (i + 1));
                         AppLogger.Debug("launch", "Auto-select attempt=" + (i + 1) + " reason=" + stateReason);
-
-                        if (stateReason.StartsWith("server list pointer is 0", StringComparison.OrdinalIgnoreCase))
-                        {
-                            repeatedServerListPointerZero++;
-                            if (repeatedServerListPointerZero >= AppConfig.AutoSelectServerObjectMissingAssumeSkipAttempts)
-                            {
-                                lastReason = stateReason + " (early-exit after " + repeatedServerListPointerZero + " repeats)";
-                                AppLogger.Warn("Auto server direct-select early-exit: server list pointer remained 0 for " + repeatedServerListPointerZero + " attempts.");
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            repeatedServerListPointerZero = 0;
-                        }
-
                         Thread.Sleep(AppConfig.AutoSelectServerRetryDelayMs);
                         continue;
                     }
 
-                    repeatedServerListPointerZero = 0;
                     lastState = serverState;
                     int obj = FindSelectServerObject(processId);
                     if (obj == 0)
@@ -136,6 +122,49 @@ namespace Shaiya_Duff_Updater
                 AppLogger.Debug("launch", "Auto-select final state gameState=0x" + lastState.GameStatePointer.ToString("X8") +
                     " list=0x" + lastState.ListPointer.ToString("X8") + " count=" + lastState.Count);
             }
+            return false;
+        }
+
+        // Authoritative "login succeeded" gate. The login server only populates the server list
+        // (gameState+0x270, with a valid count) AFTER it has accepted the credentials, so a non-zero
+        // server-list pointer is the real proof that the login packet went through and was authorized.
+        // Returns true as soon as the server-select state is ready; false on timeout or if the process dies.
+        public static bool WaitForLoginReachedServerSelect(int processId, int timeoutMs, out string reason)
+        {
+            reason = "not-run";
+            int waitMs = Math.Max(500, timeoutMs);
+            int pollMs = 250;
+            int elapsed = 0;
+
+            while (elapsed <= waitMs)
+            {
+                try
+                {
+                    if (Process.GetProcessById(processId).HasExited)
+                    {
+                        reason = "game process exited during login";
+                        return false;
+                    }
+                }
+                catch
+                {
+                    reason = "game process not available during login";
+                    return false;
+                }
+
+                ServerListState state;
+                string stateReason;
+                if (TryGetServerListState(processId, AppConfig.AutoSelectServerIndex, out state, out stateReason))
+                {
+                    reason = "server-select reached (list ready, count=" + state.Count + ")";
+                    return true;
+                }
+
+                reason = stateReason;
+                Thread.Sleep(pollMs);
+                elapsed += pollMs;
+            }
+
             return false;
         }
 

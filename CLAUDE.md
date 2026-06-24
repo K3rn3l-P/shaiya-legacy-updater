@@ -1,3 +1,21 @@
+# ⚠️ SICUREZZA — REGOLA ASSOLUTA (LEGGERE PRIMA DI TUTTO)
+
+**Gioco multiplayer mondiale → mindset produzione sempre, anche in fase di test.**
+
+## Updater.exe = UNTRUSTED. Nessun segreto nel binario.
+
+`Updater.exe` è distribuito nella cartella client. È un binario .NET 4.8 x86:
+decompilabile con ILSpy o dnSpy in secondi, codice C# quasi identico all'originale visibile.
+
+**Qualsiasi chiave/segreto hardcoded in Utilities.cs, AuthClient.cs, ecc. → estratta da qualsiasi giocatore.**
+
+**Pattern obbligatorio:** Updater invia dati grezzi (es. HWID) → server PHP firma/valida con chiave da GMSecurity.ini → risponde con risultato → Updater salva localmente.
+Chiavi risiedono SOLO in `GMSecurity.ini` e `config.php` sul server (mai nel binario client).
+
+Vedi infrastruttura completa e percorsi: `C:\Users\lol\source\repo\CLAUDE.md`
+
+---
+
 # Istruzioni — shaiya-legacy-updater
 
 Updater WPF (.NET 4.8, x86) che lancia `game.exe`, inietta credenziali in memoria e gestisce il login automatico per il client Shaiya EP6/EP8 custom.
@@ -56,7 +74,8 @@ Il puntatore globale `0x007C48FC` punta all'oggetto C++ login screen.
 ### GameOffsets.cs — indirizzi attivi
 
 ```csharp
-LoginPointer             = 0x007C48FC    // puntatore globale all'oggetto login
+LoginPointer             = 0x007C48FC    // puntatore GENERICO alla schermata attiva (molti writer)
+LoginVTable              = 0x0074FFC0    // CLogin::vftable; [LoginPointer]==LoginVTable => schermata login attiva
 UserIdOffsetFromPointer  = 4             // +4 = username buffer
 TempPasswordOffsetFromPointer = 39       // +0x27 = password buffer
 UserIdBufferLength       = 32
@@ -103,6 +122,20 @@ mcp__ghidrassistmcp__get_data_at address=0xXXXXXX len=16 program_name="game.exe"
 ```
 
 ---
+
+## Funzione che apre il login (verificata Ghidra 2026-06-24)
+
+`FUN_004d1970` = costruttore `CLogin`: carica `TA_2D_Login.tga`/`TA_2D_LoginBG.tga` e scrive la vtable
+`MOV dword ptr [ESI],0x74ffc0` @ `0x004d19ad`. Imposta `server_select_mode (+0x4eac) = 0`.
+L'updater valida `[LoginPointer]==0x0074FFC0` prima di iniettare (vedi `IsLoginScreenObject`).
+
+## Gate di login (anti falso-successo)
+
+L'updater NON avanza a server-select finché il login non è confermato. Segnale autorevole:
+server-list pointer `*(0x022EED30)+0x270 != 0` con count valido (popolato dal login server SOLO dopo
+auth riuscita) → `GameServerSelectAutomation.WaitForLoginReachedServerSelect`. Se non confermato entro
+`LoginVerifyTimeoutMs + LoginMaxRetries*LoginVerifyRetryTimeoutMs` (re-injection tra i tentativi),
+stato onesto "Login failed" e nessun avanzamento. SKIPSERVERSELECTION NON è più onorato: server-select sempre.
 
 ## Login flow — come funziona
 

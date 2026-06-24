@@ -40,6 +40,11 @@ if (!ensure_active_login_row($row)) {
 
 updater_auth_lockout_reset($lockKey);
 
+// Ban HWID: device bloccato per cheat → nega anche se l'account ha Status valido.
+if (hwid_is_blocked($deviceId)) {
+    respond(['ok' => false, 'message' => 'This account is not allowed to login.']);
+}
+
 if ($saveAccount) {
     save_device_account($deviceId, $userUid, $userId);
 }
@@ -47,4 +52,7 @@ if ($saveAccount) {
 // The game login server (sdev-login) verifies credentials via PBKDF2 against Enpassword.
 // verify_pbkdf2(Enpassword, received_password) expects the plaintext password as input.
 $passwordForGame = $password;
-respond(success_response($userId, $userUid, $passwordForGame));
+$resp = success_response($userId, $userUid, $passwordForGame);
+$hwidSig = sign_hwid_for_response($deviceId);
+if ($hwidSig !== null) $resp['hwidSig'] = $hwidSig;
+respond($resp);

@@ -16,6 +16,12 @@
 
         // Active offsets for game-pt-ps0182.exe.
         public const int LoginPointer = 0x007C48FC;
+
+        // CLogin::vftable. The constructor FUN_004d1970 (which loads TA_2D_Login.tga) writes this
+        // vtable into the object: MOV dword ptr [ESI],0x74ffc0 @ 0x004d19ad (verified Ghidra 2026-06-24).
+        // 0x007C48FC is a GENERIC current-screen pointer (many writers), so before injecting we must
+        // confirm [LoginPointer] == LoginVTable to be sure the active screen is really the login screen.
+        public const int LoginVTable = 0x0074FFC0;
         public const int PatchLoginFlow1 = 0x004D4EBF;
         public const int PatchLoginFlow2 = 0x004D1F5F;
         public const int PatchLoginFlow3 = 0x004D0DCD;

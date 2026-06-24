@@ -108,6 +108,9 @@ namespace Shaiya_Duff_Updater
                         MainWindow.MW.TempPw = response.passwordForGame;
                         MainWindow.MW.SahKeyHex = response.sahKey;
                         MainWindow.MW.LaunchToken = response.launchToken;
+                        MainWindow.MW.SecToken = response.secToken;
+                        if (!string.IsNullOrEmpty(response.hwidSig))
+                            Utilities.Hardware.SaveHwidSig(response.hwidSig);
                         if (!string.IsNullOrEmpty(response.sahKey))
                             AppConfig.SahCryptKeyHex = response.sahKey;
                         if (!string.IsNullOrEmpty(response.patchKey))

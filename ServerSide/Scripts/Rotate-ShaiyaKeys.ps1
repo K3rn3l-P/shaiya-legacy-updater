@@ -133,6 +133,18 @@ try {
         Log ('Re-cifratura saltata (sahcrypt=' + $ct + ' PatchDir=' + $pd + ' OldKey=' + $ok + ')')
     }
 
+    # 4b. Invalida GameSecuritySessions — secToken client legati alle vecchie chiavi.
+    # launchToken diventa invalido automaticamente (HMAC con ClientSecret cambiato).
+    # secToken sono random+DB: non dipendono dalle chiavi, vanno eliminati manualmente.
+    # Al prossimo login dall'updater, un nuovo secToken viene generato automaticamente.
+    Log 'Invalidazione GameSecuritySessions...'
+    $delResult = & sqlcmd -S 127.0.0.1 -E -d PS_UserData -Q "DELETE FROM dbo.GameSecuritySessions; PRINT CAST(@@ROWCOUNT AS VARCHAR) + ' sessioni invalidate';" 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Log ('GameSecuritySessions: ' + ($delResult -join ' ').Trim())
+    } else {
+        Log ('WARN: DELETE GameSecuritySessions fallito: ' + ($delResult -join ' '))
+    }
+
     # 5. Riavvio del server Windows
     # I servizi ps_* si riavviano automaticamente all'avvio (AUTO_START DELAYED).
     # Il riavvio garantisce il reload di GMSecurity.ini da parte di tutti i servizi

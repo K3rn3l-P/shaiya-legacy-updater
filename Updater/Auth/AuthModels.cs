@@ -18,6 +18,13 @@ namespace Shaiya_Duff_Updater
         // Token effimero (8 hex chars = uint32_t LE) pre-computato dal server.
         // Passato via SDEV_AUTH_KEY a game.exe. Valido ~10 min. Client non ha mai il segreto.
         public string launchToken { get; set; }
+        // Token di sessione sicurezza (64 hex chars = 32 byte random).
+        // SHA256(token) salvato in DB GameSecuritySessions. Valido 24h.
+        // Passato via SDEV_SEC_TOKEN a game.exe per autenticare i tamper report HTTP.
+        public string secToken { get; set; }
+        // Firma HMAC-SHA256(hwid, HwidSigKey) calcolata dal server (64 hex chars lowercase).
+        // Salvare in device.id.sig. La chiave NON è mai nel client.
+        public string hwidSig { get; set; }
     }
 
     public class SavedAccountsResponse
@@ -31,6 +38,16 @@ namespace Shaiya_Duff_Updater
     {
         public bool ok { get; set; }
         public string message { get; set; }
+    }
+
+    // Response of api/status.php. The fact the call succeeds at all proves the website/API is up;
+    // "server" reflects whether the login server (ps_login) TCP port is reachable.
+    public class StatusResponse
+    {
+        public bool ok { get; set; }
+        public bool web { get; set; }
+        public bool server { get; set; }
+        public long ts { get; set; }
     }
 
     public class WebNewsItem

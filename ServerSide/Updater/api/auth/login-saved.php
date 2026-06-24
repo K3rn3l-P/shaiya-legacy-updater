@@ -24,7 +24,15 @@ if (!ensure_active_login_row($row)) {
     respond(['ok' => false, 'message' => 'This account is not allowed to login.']);
 }
 
+// Ban HWID: device bloccato per cheat → nega anche se l'account ha Status valido.
+if (hwid_is_blocked($deviceId)) {
+    respond(['ok' => false, 'message' => 'This account is not allowed to login.']);
+}
+
 $passwordForGame = generate_login_token((string)$row['UserID']);
 
 save_device_account($deviceId, (int)$row['UserUID'], (string)$row['UserID']);
-respond(success_response((string)$row['UserID'], (int)$row['UserUID'], $passwordForGame));
+$resp = success_response((string)$row['UserID'], (int)$row['UserUID'], $passwordForGame);
+$hwidSig = sign_hwid_for_response($deviceId);
+if ($hwidSig !== null) $resp['hwidSig'] = $hwidSig;
+respond($resp);

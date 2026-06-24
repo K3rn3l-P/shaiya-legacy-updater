@@ -22,6 +22,7 @@ namespace Shaiya_Duff_Updater
         public string TempPw;
         public string SahKeyHex;
         public string LaunchToken;  // token effimero dal server, passato via SDEV_AUTH_KEY
+        public string SecToken;     // token sessione sicurezza 64-hex, passato via SDEV_SEC_TOKEN
         public byte? LogInType;
         private bool _launchingGame;
         private bool _newsLoaded;
@@ -50,6 +51,70 @@ namespace Shaiya_Duff_Updater
                 Width = 270
             };
             RefreshLogInView();
+            StartServerStatusMonitor();
+        }
+
+        // ---- Server / Web status monitor -------------------------------------------------
+
+        private System.Windows.Threading.DispatcherTimer _statusTimer;
+        private bool _statusChecking;
+        // True only when api/status.php answered AND reported the login server offline.
+        // If status.php is unreachable we keep this false (fail-open): we cannot be sure the game
+        // server is down, and the website/api being down already blocks login anyway.
+        private bool _serverKnownOffline;
+
+        private void StartServerStatusMonitor()
+        {
+            RunServerStatusCheckAsync();
+            _statusTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(20)
+            };
+            _statusTimer.Tick += delegate { RunServerStatusCheckAsync(); };
+            _statusTimer.Start();
+        }
+
+        private void RunServerStatusCheckAsync()
+        {
+            if (_statusChecking) return;
+            _statusChecking = true;
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                ServerStatusClient.Status st = ServerStatusClient.Get();
+                _statusChecking = false;
+                try { Dispatcher.BeginInvoke(new Action(delegate { ApplyServerStatus(st); })); }
+                catch { }
+            });
+        }
+
+        private void ApplyServerStatus(ServerStatusClient.Status st)
+        {
+            Brush green = (Brush)new BrushConverter().ConvertFrom("#5BD17B");
+            Brush red = (Brush)new BrushConverter().ConvertFrom("#E0574B");
+            Brush grey = (Brush)new BrushConverter().ConvertFrom("#7B7B7B");
+
+            if (!st.Reachable)
+            {
+                DotWeb.Fill = red;
+                DotServer.Fill = grey;
+                StatusPill.ToolTip = "Website unreachable · server status unknown";
+                _serverKnownOffline = false; // fail-open
+            }
+            else
+            {
+                DotWeb.Fill = green;
+                DotServer.Fill = st.Server ? green : red;
+                StatusPill.ToolTip = "Web online · Login server " + (st.Server ? "online" : "offline");
+                _serverKnownOffline = !st.Server;
+            }
+
+            UpdateStartButtonGate();
+        }
+
+        private void UpdateStartButtonGate()
+        {
+            if (GameStartButton == null) return;
+            GameStartButton.ActionEnabled = !_serverKnownOffline;
         }
 
         private void DragWindow(object sender, MouseButtonEventArgs e)
@@ -563,10 +628,18 @@ namespace Shaiya_Duff_Updater
         {
             if (UserID == null || !Updater.FinishedUpdating) return;
             GameStartButton.Visibility = Visibility.Visible;
+            UpdateStartButtonGate();
         }
 
         private void GameStartButton_Click(object sender, MouseButtonEventArgs e)
         {
+            // Login server known offline → button is greyed out; ignore the click.
+            if (!GameStartButton.ActionEnabled)
+            {
+                MessageDialog.Display("Server offline", "The game server is currently offline. Please try again later.");
+                return;
+            }
+
             string gamePath = Path.Combine(AppPaths.BaseDirectory, AppConfig.GameExecutable);
             if (!File.Exists(gamePath))
             {
@@ -641,6 +714,9 @@ namespace Shaiya_Duff_Updater
                 if (!string.IsNullOrWhiteSpace(MW.LaunchToken))
                     psi.EnvironmentVariables["SDEV_AUTH_KEY"] = MW.LaunchToken;
 
+                if (!string.IsNullOrWhiteSpace(MW.SecToken))
+                    psi.EnvironmentVariables["SDEV_SEC_TOKEN"] = MW.SecToken;
+
                 if (!VerifyClientDllIntegrity(AppPaths.BaseDirectory))
                     throw new InvalidOperationException("Client integrity check failed. Please use Repair to restore the client files.");
 
@@ -652,7 +728,7 @@ namespace Shaiya_Duff_Updater
                 AppLogger.Debug("launch", "Game process started. pid=" + processId);
                 gameWindow = GameWindowController.HideUntilReady(processId);
                 try { TryInjectCredentials(processId, out success); }
-                finally { MW.TempPw = null; MW.LaunchToken = null; MW.SahKeyHex = null; }
+                finally { MW.TempPw = null; MW.LaunchToken = null; MW.SahKeyHex = null; MW.SecToken = null; }
             }
             catch (Exception ex)
             {
@@ -780,17 +856,33 @@ namespace Shaiya_Duff_Updater
 
             AppLogger.Debug("launch", "TryInjectCredentials start. pid=" + processId);
             Thread.Sleep(2000);
+
+            // 0x007C48FC is a generic "current screen" pointer (many writers). Waiting for it to be
+            // non-zero is not enough: it may transiently point to another screen object. We only
+            // inject once it points to an object whose vtable == CLogin::vftable (0x0074FFC0), i.e.
+            // the login screen built by FUN_004d1970 (the function that loads TA_2D_Login.tga).
             int pointer = 0;
+            int lastVtable = 0;
+            bool loginScreenReady = false;
             for (int i = 0; i < 150; i++)
             {
                 pointer = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, GameOffsets.LoginPointer, 4), 0);
-                if (pointer != 0) break;
+                if (pointer != 0)
+                {
+                    try { lastVtable = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, pointer, 4), 0); } catch { lastVtable = 0; }
+                    if (lastVtable == GameOffsets.LoginVTable)
+                    {
+                        loginScreenReady = true;
+                        break;
+                    }
+                }
                 if (i % 25 == 0)
                 {
                     bool alive = false;
                     try { alive = !Process.GetProcessById(processId).HasExited; } catch { }
-                    AppLogger.Debug("launch", "Waiting login ptr... attempt=" + (i + 1) + "/150 ptr=0x"
-                        + pointer.ToString("X8") + " alive=" + alive
+                    AppLogger.Debug("launch", "Waiting login screen... attempt=" + (i + 1) + "/150 ptr=0x"
+                        + pointer.ToString("X8") + " vtable=0x" + lastVtable.ToString("X8") + " alive=" + alive
+                        + " expectVtable=0x" + GameOffsets.LoginVTable.ToString("X8")
                         + " offset=0x" + GameOffsets.LoginPointer.ToString("X8"));
                     if (!alive)
                         throw new InvalidOperationException(
@@ -799,17 +891,32 @@ namespace Shaiya_Duff_Updater
                 }
                 Thread.Sleep(200);
             }
-            if (pointer == 0)
+
+            if (loginScreenReady)
+            {
+                AppLogger.Debug("launch", "Login screen ready. object=0x" + pointer.ToString("X8") + " vtable=0x" + lastVtable.ToString("X8"));
+            }
+            else if (pointer != 0)
+            {
+                // Graceful degradation: the screen pointer is present but its vtable never matched the
+                // expected CLogin vtable (likely a different game.exe build). Proceed with the current
+                // pointer instead of hard-failing a working login screen. The real vtable is logged so
+                // GameOffsets.LoginVTable can be corrected for this build.
+                AppLogger.Warn("Login screen vtable did not match expected value; proceeding with current screen pointer.");
+                AppLogger.Debug("launch", "Login screen vtable mismatch. ptr=0x" + pointer.ToString("X8")
+                    + " gotVtable=0x" + lastVtable.ToString("X8")
+                    + " expectVtable=0x" + GameOffsets.LoginVTable.ToString("X8")
+                    + " -> update GameOffsets.LoginVTable if this build is now standard.");
+            }
+            else
             {
                 bool alive = false;
                 try { alive = !Process.GetProcessById(processId).HasExited; } catch { }
                 throw new InvalidOperationException(
                     "Game login screen did not initialize after 30s. "
-                    + "ptr@0x" + GameOffsets.LoginPointer.ToString("X8") + "=0 alive=" + alive
+                    + "ptr@0x" + GameOffsets.LoginPointer.ToString("X8") + "=0x" + pointer.ToString("X8") + " alive=" + alive
                     + ". Check: SDEV_SAH_KEY env, SAFB integrity, sdev-client.dll loaded.");
             }
-
-            AppLogger.Debug("launch", "Login pointer initialized. address=0x" + pointer.ToString("X8"));
 
             int netState = 0;
             for (int i = 0; i < 150; i++)
@@ -821,137 +928,129 @@ namespace Shaiya_Duff_Updater
             if (netState == 0) throw new InvalidOperationException("Network state pointer (DAT_022eed30) was not initialized.");
             AppLogger.Debug("launch", "Network state ready. address=0x" + netState.ToString("X8"));
 
+            // Diagnostic only: the login socket may still be 0 here because the login packet is sent by
+            // the game's per-frame DoLogin path AFTER we inject + patch. It is NOT a precondition.
             int loginSocket = 0;
-            for (int i = 0; i < 50; i++)
+            for (int i = 0; i < 10; i++)
             {
-                loginSocket = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, netState + 4, 4), 0);
+                try { loginSocket = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, netState + 4, 4), 0); } catch { }
                 if (loginSocket != 0) break;
-                Thread.Sleep(200);
+                Thread.Sleep(100);
             }
-            AppLogger.Debug("launch", "Login socket. value=0x" + loginSocket.ToString("X8") + " ready=" + (loginSocket != 0 ? "1" : "0"));
+            AppLogger.Debug("launch", "Login socket (diagnostic). value=0x" + loginSocket.ToString("X8") + " ready=" + (loginSocket != 0 ? "1" : "0"));
 
             SetGameLaunchStatus("Logging in...", "Connecting with your account.");
             InjectCredentials(processId, pointer, out loginFlowBackup, out loginFlowPatched);
-            AppLogger.Debug("launch", "Credentials injected.");
+            AppLogger.Debug("launch", "Credentials injected. Waiting for login to reach server selection.");
 
-            if (AppConfig.SkipServerSelectionFromClientConfig)
+            // Authoritative login gate: do NOT advance to server selection until the login server has
+            // actually accepted the credentials (server list populated). Re-inject between attempts to
+            // cover the case where the first injection raced the frame that triggers DoLogin.
+            bool loginConfirmed = false;
+            string loginReason = "not-run";
+            int maxRetries = Math.Max(0, AppConfig.LoginMaxRetries);
+            for (int attempt = 0; attempt <= maxRetries && !loginConfirmed; attempt++)
             {
-                AppLogger.Info("SKIPSERVERSELECTION=1 detected in CONFIG.INI. Skipping launcher auto-select hook.");
-                AppLogger.Debug("launch", "Branch=SkipServerSelectionFromClientConfig.");
-
-                int holdMs = Math.Max(0, AppConfig.LoginFlowPatchRestoreDelayMs);
-                if (holdMs > 0)
+                if (attempt > 0)
                 {
-                    AppLogger.Debug("launch", "Holding login flow patches for " + holdMs + "ms before skip-mode TCP wait.");
-                    Thread.Sleep(holdMs);
-                }
-
-                bool skipTcpReady = GameTcpPortTransitionWatcher.WaitForLoginToGameTransition(processId, AppConfig.SkipServerSelectionTcpTimeoutMs);
-                AppLogger.Debug("launch", "Skip-mode TCP wait finished. detected=" + (skipTcpReady ? "1" : "0"));
-
-                if (!skipTcpReady && AppConfig.AutoSelectRetryWhenServerListMissing)
-                {
-                    int retryDelay = Math.Max(0, AppConfig.AutoSelectRetryDelayMs);
-                    AppLogger.Warn("Skip-mode recovery triggered after TCP timeout. RetryDelayMs=" + retryDelay);
-                    if (retryDelay > 0) Thread.Sleep(retryDelay);
-
                     try
                     {
                         if (Process.GetProcessById(processId).HasExited)
                         {
-                            AppLogger.Warn("Skip-mode recovery skipped because the game process already exited.");
-                        }
-                        else
-                        {
-                            ReinjectCredentialsAndPatches(processId, pointer);
-                            loginFlowPatched = true;
-                            AppLogger.Debug("launch", "Skip-mode recovery reinjection completed.");
-
-                            if (holdMs > 0)
-                            {
-                                AppLogger.Debug("launch", "Holding login flow patches for " + holdMs + "ms before skip-mode recovery TCP wait.");
-                                Thread.Sleep(holdMs);
-                            }
-
-                            skipTcpReady = GameTcpPortTransitionWatcher.WaitForLoginToGameTransition(processId, AppConfig.SkipServerSelectionTcpTimeoutMs);
-                            AppLogger.Debug("launch", "Skip-mode recovery TCP wait finished. detected=" + (skipTcpReady ? "1" : "0"));
+                            loginReason = "game process exited before login retry";
+                            break;
                         }
                     }
-                    catch
+                    catch { loginReason = "game process not available before login retry"; break; }
+
+                    // Only re-inject while still on the login screen; if the screen already moved on we
+                    // must not clobber a different object that now lives at the same pointer. When the
+                    // vtable was never validated (different build, fallback path), skip the guard.
+                    if (!loginScreenReady || IsLoginScreenObject(processId, pointer))
                     {
-                        AppLogger.Warn("Skip-mode recovery skipped because the game process is no longer available.");
+                        ReinjectCredentialsAndPatches(processId, pointer);
+                        loginFlowPatched = true;
+                        AppLogger.Debug("launch", "Login gate retry " + attempt + "/" + maxRetries + ": credentials + patches re-injected.");
+                    }
+                    else
+                    {
+                        AppLogger.Debug("launch", "Login gate retry " + attempt + ": screen is no longer the login object; skipping re-injection.");
                     }
                 }
 
-                if (skipTcpReady)
+                int waitMs = attempt == 0 ? AppConfig.LoginVerifyTimeoutMs : AppConfig.LoginVerifyRetryTimeoutMs;
+                loginConfirmed = GameServerSelectAutomation.WaitForLoginReachedServerSelect(processId, waitMs, out loginReason);
+                AppLogger.Debug("launch", "Login gate attempt=" + attempt + " waitMs=" + waitMs + " confirmed=" + (loginConfirmed ? "1" : "0") + " reason=" + loginReason);
+            }
+
+            if (!loginConfirmed)
+            {
+                // Honest failure: never pretend success / advance to server selection when login did not
+                // happen. Leave the game running so the player can complete the login manually.
+                AppLogger.Warn("Login did not reach server selection within timeout. Leaving game for manual login.");
+                AppLogger.Debug("launch", "Branch=LoginFailed reason=" + loginReason);
+                TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "login-not-confirmed");
+                loginFlowPatched = false;
+                SetGameLaunchStatus("Login failed", "Could not log in. Please check your credentials and try again.");
+                success = false;
+                return;
+            }
+
+            AppLogger.Debug("launch", "Login confirmed (server selection reached). reason=" + loginReason);
+
+            try
+            {
+                SetGameLaunchStatus("Selecting server...", "Preparing character list.");
+                autoSelected = GameServerSelectAutomation.AutoSelectFirstServer(processId);
+                AppLogger.Debug("launch", "Auto-select attempted. result=" + (autoSelected ? "1" : "0"));
+
+                if (!autoSelected)
                 {
-                    TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "skip-server-selection-tcp-ready");
+                    // Login is confirmed, so the server list exists; a failed auto-select here is just a
+                    // transient object-scan miss. Re-inject and try once more.
+                    int retryDelay = Math.Max(0, AppConfig.AutoSelectRetryDelayMs);
+                    if (retryDelay > 0) Thread.Sleep(retryDelay);
+                    if (!loginScreenReady || IsLoginScreenObject(processId, pointer)) ReinjectCredentialsAndPatches(processId, pointer);
+                    autoSelected = GameServerSelectAutomation.AutoSelectFirstServer(processId);
+                    AppLogger.Debug("launch", "Auto-select retry result=" + (autoSelected ? "1" : "0"));
+                }
+            }
+            catch (Exception autoEx)
+            {
+                // Auto server selection is optional. Never kill the game for this step;
+                // the player can still select the server manually.
+                AppLogger.Warn("Auto server select failed without terminating game: " + autoEx.Message);
+            }
+
+            if (autoSelected)
+            {
+                bool tcpTransitionDetected = GameTcpPortTransitionWatcher.WaitForLoginToGameTransition(processId, AppConfig.TcpPortTransitionTimeoutMs);
+                AppLogger.Debug("launch", "TCP wait after auto-select finished. detected=" + (tcpTransitionDetected ? "1" : "0"));
+                if (tcpTransitionDetected)
+                {
+                    TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "autoselect-success-tcp-ready");
                     loginFlowPatched = false;
                     SetGameLaunchStatus("Loading characters...", "Almost ready.");
                 }
                 else
                 {
-                    AppLogger.Warn("Skip-mode did not reach character selection within timeout. Falling back to manual login visibility.");
-                    SetGameLaunchStatus("Manual login required", "Please continue in the game window.");
-                    Thread.Sleep(AppConfig.LoginOverlayFallbackRevealDelayMs);
+                    AppLogger.Warn("TCP transition was not detected after auto-select. Using time-based reveal fallback.");
+                    TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "tcp-timeout-after-autoselect");
+                    loginFlowPatched = false;
+                    SetGameLaunchStatus("Loading characters...", "Almost ready.");
+                    Thread.Sleep(AppConfig.LoginOverlayRevealDelayMs);
                 }
             }
             else
             {
-                try
-                {
-                    SetGameLaunchStatus("Selecting server...", "Preparing character list.");
-                    autoSelected = GameServerSelectAutomation.AutoSelectFirstServer(processId);
-                    AppLogger.Debug("launch", "Auto-select attempted. result=" + (autoSelected ? "1" : "0"));
-
-                    if (!autoSelected && ShouldRetryAutoSelectBecauseServerListMissing())
-                    {
-                        int retryDelay = Math.Max(0, AppConfig.AutoSelectRetryDelayMs);
-                        AppLogger.Warn("Auto-select recovery triggered. Reason=" + GameServerSelectAutomation.LastDecisionReason + " Attempts=" + GameServerSelectAutomation.LastDecisionAttemptCount + " RetryDelayMs=" + retryDelay);
-                        if (retryDelay > 0) Thread.Sleep(retryDelay);
-
-                        ReinjectCredentialsAndPatches(processId, pointer);
-                        AppLogger.Debug("launch", "Auto-select recovery reinjection completed.");
-
-                        autoSelected = GameServerSelectAutomation.AutoSelectFirstServer(processId);
-                        AppLogger.Debug("launch", "Auto-select recovery attempt result=" + (autoSelected ? "1" : "0"));
-                    }
-                }
-                catch (Exception autoEx)
-                {
-                    // Auto server selection is optional. Never kill the game for this step;
-                    // the player can still select the server manually.
-                    AppLogger.Warn("Auto server select failed without terminating game: " + autoEx.Message);
-                }
-
-                if (autoSelected)
-                {
-                    bool tcpTransitionDetected = GameTcpPortTransitionWatcher.WaitForLoginToGameTransition(processId, AppConfig.TcpPortTransitionTimeoutMs);
-                    AppLogger.Debug("launch", "TCP wait after auto-select finished. detected=" + (tcpTransitionDetected ? "1" : "0"));
-                    if (tcpTransitionDetected)
-                    {
-                        TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "autoselect-success-tcp-ready");
-                        loginFlowPatched = false;
-                        SetGameLaunchStatus("Loading characters...", "Almost ready.");
-                    }
-                    else
-                    {
-                        AppLogger.Warn("TCP transition was not detected after auto-select. Using time-based reveal fallback.");
-                        TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "tcp-timeout-after-autoselect");
-                        loginFlowPatched = false;
-                        SetGameLaunchStatus("Loading characters...", "Almost ready.");
-                        Thread.Sleep(AppConfig.LoginOverlayRevealDelayMs);
-                    }
-                }
-                else
-                {
-                    string manualReason = GameServerSelectAutomation.LastDecisionReason;
-                    int manualAttempts = GameServerSelectAutomation.LastDecisionAttemptCount;
-                    AppLogger.Warn("Switching to manual server selection. Reason=" + manualReason + " Attempts=" + manualAttempts);
-                    AppLogger.Debug("launch", "Branch=ManualServerSelectionRequired reason=" + manualReason + " attempts=" + manualAttempts);
-                    SetGameLaunchStatus("Manual server selection required", "Please continue in the game window.");
-                    Thread.Sleep(AppConfig.LoginOverlayFallbackRevealDelayMs);
-                }
+                // Login succeeded but the auto-select hook could not be installed. The server list IS up,
+                // so let the player pick the server manually in the (now revealed) game window.
+                AppLogger.Warn("Auto server selection unavailable; switching to manual server selection.");
+                AppLogger.Debug("launch", "Branch=ManualServerSelection reason=" + GameServerSelectAutomation.LastDecisionReason + " attempts=" + GameServerSelectAutomation.LastDecisionAttemptCount);
+                TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "manual-server-selection");
+                loginFlowPatched = false;
+                SetGameLaunchStatus("Select your server", "Please choose your server in the game window.");
+                Thread.Sleep(AppConfig.LoginOverlayFallbackRevealDelayMs);
             }
 
             success = true;
@@ -989,11 +1088,21 @@ namespace Shaiya_Duff_Updater
             MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow3, GameOffsets.PatchLoginFlow3Bytes);
         }
 
-        private static bool ShouldRetryAutoSelectBecauseServerListMissing()
+        // True when the active screen object at LoginPointer is the CLogin screen (vtable check).
+        // Used to confirm the login screen before injecting and to avoid clobbering a different
+        // screen object that may later occupy the same generic screen pointer.
+        private static bool IsLoginScreenObject(int processId, int pointer)
         {
-            if (!AppConfig.AutoSelectRetryWhenServerListMissing) return false;
-            string reason = GameServerSelectAutomation.LastDecisionReason ?? string.Empty;
-            return reason.IndexOf("server list pointer is 0", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (pointer == 0) return false;
+            try
+            {
+                int vtable = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, pointer, 4), 0);
+                return vtable == GameOffsets.LoginVTable;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static LoginFlowPatchBackup CaptureLoginFlowPatchBackup(int processId)

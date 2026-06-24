@@ -45,6 +45,9 @@
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Ionic.Zip">
       <HintPath>lib\Ionic.Zip.dll</HintPath>
@@ -73,6 +76,7 @@
     <Compile Include="Auth\AuthClient.cs" />
     <Compile Include="Auth\AuthModels.cs" />
     <Compile Include="Auth\JsonHttpClient.cs" />
+    <Compile Include="Auth\ServerStatusClient.cs" />
     <Compile Include="Auth\LocalAccountStore.cs" />
     <Compile Include="Core\AppConfig.cs" />
     <Compile Include="Core\AppLogger.cs" />

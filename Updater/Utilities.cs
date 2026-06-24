@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -20,6 +20,7 @@ namespace Shaiya_Duff_Updater
     {
       private static readonly object HwidSync = new object();
       private static readonly string HwidPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Shaiya_Duff_Updater", "device.id");
+      private static readonly string SigPath = HwidPath + ".sig";
 
       public static string HWID = "";
       public static string CPU_ID = "";
@@ -41,6 +42,14 @@ namespace Shaiya_Duff_Updater
         Utilities.Hardware.HWID = LoadOrCreateStableHwid(legacyHwid);
       }
 
+      // Scrive la firma ricevuta dal server in device.id.sig.
+      // Chiamato da UpdaterManager.ReturnLogIn dopo login riuscito.
+      public static void SaveHwidSig(string sig)
+      {
+          if (string.IsNullOrEmpty(sig)) return;
+          try { File.WriteAllText(SigPath, sig); } catch { }
+      }
+
       private static string LoadOrCreateStableHwid(string fallback)
       {
         try
@@ -50,9 +59,11 @@ namespace Shaiya_Duff_Updater
             if (File.Exists(HwidPath))
             {
               string stored = File.ReadAllText(HwidPath).Trim();
-              if (!string.IsNullOrWhiteSpace(stored)) return stored;
+              if (!string.IsNullOrWhiteSpace(stored))
+                return stored;
             }
 
+            // Primo avvio o file corrotto: ricrea da hardware
             string hwid = !string.IsNullOrWhiteSpace(fallback) ? fallback : Guid.NewGuid().ToString("N").ToUpperInvariant();
             Directory.CreateDirectory(Path.GetDirectoryName(HwidPath) ?? string.Empty);
             File.WriteAllText(HwidPath, hwid);
@@ -152,7 +163,3 @@ namespace Shaiya_Duff_Updater
     }
   }
 }
-
-
-
-

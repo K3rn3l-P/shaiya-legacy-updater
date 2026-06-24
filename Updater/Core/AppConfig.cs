@@ -36,18 +36,25 @@ namespace Shaiya_Duff_Updater
         public static int AutoSelectServerIndex = 0;
         public static int AutoSelectServerRetries = 30;
         public static int AutoSelectServerRetryDelayMs = 500;
-        public static int AutoSelectServerObjectMissingAssumeSkipAttempts = 6;
 
-        // Client CONFIG.INI override. When enabled, game skips server selection screen itself.
+        // Authoritative login gate. The updater waits for the login server to populate the server list
+        // (proof the credentials were accepted) before advancing to server selection. Re-injection
+        // between attempts covers the race with the per-frame DoLogin trigger: log evidence shows the
+        // server list often appears only AFTER a re-injection, so attempts are kept short to re-inject
+        // frequently (~every LoginVerifyRetryTimeoutMs) instead of waiting one long window.
+        // Worst-case budget ~ LoginVerifyTimeoutMs + LoginMaxRetries * LoginVerifyRetryTimeoutMs (~27s).
+        public static int LoginVerifyTimeoutMs = 3000;
+        public static int LoginVerifyRetryTimeoutMs = 3000;
+        public static int LoginMaxRetries = 8;
+
+        // The game always shows server selection now (SKIPSERVERSELECTION is no longer honored).
         public static string ClientConfigFile = "CONFIG.INI";
-        public static bool SkipServerSelectionFromClientConfig = false;
 
         // TCP transition detection defaults (login -> game).
         public static int LoginTcpPort = 30800;
         public static int GameTcpPort = 30810;
         public static int TcpPortTransitionDelayMs = 2000;
         public static int TcpPortTransitionTimeoutMs = 30000;
-        public static int SkipServerSelectionTcpTimeoutMs = 8000;
 
         // Keeps login/server-select screens out of sight while the normal game flow runs.
         // The loading state is drawn inside the launcher UI; no separate overlay window is created.
@@ -56,9 +63,7 @@ namespace Shaiya_Duff_Updater
         public static string LoginOverlaySubText = "Preparing character selection. Please wait.";
         public static int LoginOverlayRevealDelayMs = 6000;
         public static int LoginOverlayFallbackRevealDelayMs = 1000;
-        public static int SkipServerSelectionRevealDelayMs = 2000;
         public static int LoginFlowPatchRestoreDelayMs = 2000;
-        public static bool AutoSelectRetryWhenServerListMissing = true;
         public static int AutoSelectRetryDelayMs = 1500;
 
         // Keeps the real game window out of sight while the launcher loading panel is shown.
@@ -121,15 +126,15 @@ namespace Shaiya_Duff_Updater
                 AutoSelectServerIndex = Math.Max(0, ini.GetInt("Game", "AutoSelectServerIndex", AutoSelectServerIndex));
                 AutoSelectServerRetries = Math.Max(1, ini.GetInt("Game", "AutoSelectServerRetries", AutoSelectServerRetries));
                 AutoSelectServerRetryDelayMs = Math.Max(100, ini.GetInt("Game", "AutoSelectServerRetryDelayMs", AutoSelectServerRetryDelayMs));
-                AutoSelectServerObjectMissingAssumeSkipAttempts = Math.Max(1, ini.GetInt("Game", "AutoSelectServerObjectMissingAssumeSkipAttempts", AutoSelectServerObjectMissingAssumeSkipAttempts));
+                LoginVerifyTimeoutMs = Math.Max(1000, ini.GetInt("Game", "LoginVerifyTimeoutMs", LoginVerifyTimeoutMs));
+                LoginVerifyRetryTimeoutMs = Math.Max(1000, ini.GetInt("Game", "LoginVerifyRetryTimeoutMs", LoginVerifyRetryTimeoutMs));
+                LoginMaxRetries = Math.Max(0, ini.GetInt("Game", "LoginMaxRetries", LoginMaxRetries));
                 HideLoginScreens = ini.GetBool("Game", "HideLoginScreens", HideLoginScreens);
                 LoginOverlayText = ini.Get("Game", "LoginOverlayText", LoginOverlayText);
                 LoginOverlaySubText = ini.Get("Game", "LoginOverlaySubText", LoginOverlaySubText);
                 LoginOverlayRevealDelayMs = Math.Max(0, ini.GetInt("Game", "LoginOverlayRevealDelayMs", LoginOverlayRevealDelayMs));
                 LoginOverlayFallbackRevealDelayMs = Math.Max(0, ini.GetInt("Game", "LoginOverlayFallbackRevealDelayMs", LoginOverlayFallbackRevealDelayMs));
-                SkipServerSelectionRevealDelayMs = Math.Max(0, ini.GetInt("Game", "SkipServerSelectionRevealDelayMs", SkipServerSelectionRevealDelayMs));
                 LoginFlowPatchRestoreDelayMs = Math.Max(0, ini.GetInt("Game", "LoginFlowPatchRestoreDelayMs", LoginFlowPatchRestoreDelayMs));
-                AutoSelectRetryWhenServerListMissing = ini.GetBool("Game", "AutoSelectRetryWhenServerListMissing", AutoSelectRetryWhenServerListMissing);
                 AutoSelectRetryDelayMs = Math.Max(0, ini.GetInt("Game", "AutoSelectRetryDelayMs", AutoSelectRetryDelayMs));
                 HideGameWindowUntilReady = ini.GetBool("Game", "HideGameWindowUntilReady", HideGameWindowUntilReady);
                 GameWindowHideMode = ini.Get("Game", "GameWindowHideMode", GameWindowHideMode);
@@ -140,7 +145,6 @@ namespace Shaiya_Duff_Updater
                 GameTcpPort = Math.Max(1, ini.GetInt("Game", "GameTcpPort", GameTcpPort));
                 TcpPortTransitionDelayMs = Math.Max(0, ini.GetInt("Game", "TcpPortTransitionDelayMs", TcpPortTransitionDelayMs));
                 TcpPortTransitionTimeoutMs = Math.Max(5000, ini.GetInt("Game", "TcpPortTransitionTimeoutMs", TcpPortTransitionTimeoutMs));
-                SkipServerSelectionTcpTimeoutMs = Math.Max(1000, ini.GetInt("Game", "SkipServerSelectionTcpTimeoutMs", SkipServerSelectionTcpTimeoutMs));
 
                 MinLauncherVersion = ini.GetInt("Launcher", "MinLauncherVersion", MinLauncherVersion);
                 ForceUpdate = ini.GetBool("Launcher", "ForceUpdate", ForceUpdate);

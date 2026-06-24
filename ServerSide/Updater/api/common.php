@@ -209,6 +209,20 @@ function ensure_active_login_row($row) {
     return true;
 }
 
+// Ban HWID: blocca il login updater se il device.id e' in dbo.BlockedHWID,
+// anche con Status=0 (account non bannato ma hardware bloccato per cheat).
+// Collation SQL Server case-insensitive: il match Hwid=? ignora il case.
+function hwid_is_blocked(string $deviceId): bool {
+    if ($deviceId === '') return false;
+    if (!table_exists('dbo.BlockedHWID')) return false;
+    $row = db_fetch_one(
+        "SELECT TOP 1 1 AS Blocked FROM dbo.BlockedHWID
+         WHERE Hwid = ? AND (ExpiresAt IS NULL OR ExpiresAt > GETDATE())",
+        [$deviceId]
+    );
+    return $row !== null;
+}
+
 function save_device_account($deviceId, $userUid, $userId) {
     if ($deviceId === '') return;
     if (!table_exists('dbo.Updater_SavedDeviceAccount')) return;
@@ -297,6 +311,47 @@ function get_launch_token() {
     return str_pad(dechex($tokenInt), 8, '0', STR_PAD_LEFT);          // 8 hex chars
 }
 
+// ---------------------------------------------------------------------------
+// Security session token — usato da sdev-client.dll per autenticare i
+// tamper report HTTP. Token raw non entra mai nel DB: solo SHA256(token).
+// Scade dopo 24h. Revocato se l'utente logga di nuovo.
+// ---------------------------------------------------------------------------
+
+function generate_and_save_sec_token($userUid, $userId) {
+    if (!table_exists('dbo.GameSecuritySessions')) return null;
+    $token = bin2hex(random_bytes(32)); // 64 hex chars, 256 bit entropia
+    $ip    = client_ip();
+
+    // Revoca token precedenti dello stesso utente (un token per sessione)
+    db_query(
+        "DELETE FROM dbo.GameSecuritySessions WHERE UserUID = ?",
+        [(int)$userUid]
+    );
+
+    // HASHBYTES in SQL — evita problemi di encoding binary tra PHP e sqlsrv.
+    // SQL Server calcola SHA256 della stringa varchar, match identico nel lookup.
+    db_query(
+        "INSERT INTO dbo.GameSecuritySessions (TokenHash, UserUID, UserID, ClientIP, ExpiresAt)
+         VALUES (HASHBYTES('SHA2_256', ?), ?, ?, ?, DATEADD(HOUR, 4, SYSUTCDATETIME()))",
+        [$token, (int)$userUid, $userId, $ip]
+    );
+
+    // Pulizia periodica token scaduti (1% delle chiamate, non blocca)
+    if (random_int(0, 99) === 0) {
+        @db_query("DELETE FROM dbo.GameSecuritySessions WHERE ExpiresAt <= SYSUTCDATETIME()", []);
+    }
+
+    return $token;
+}
+
+function sign_hwid_for_response(string $deviceId): ?string {
+    global $config;
+    $key = isset($config['hwid_sig_key']) ? (string)$config['hwid_sig_key'] : '';
+    if ($key === '' || strlen($key) !== 64 || !ctype_xdigit($key)) return null;
+    if (!preg_match('/^[0-9A-Fa-f]{32}$/', $deviceId)) return null;
+    return hash_hmac('sha256', $deviceId, hex2bin($key));
+}
+
 function success_response($userId, $userUid, $passwordForGame) {
     $resp = [
         'ok' => true,
@@ -316,6 +371,10 @@ function success_response($userId, $userUid, $passwordForGame) {
     $launchToken = get_launch_token();
     if ($launchToken !== null) {
         $resp['launchToken'] = $launchToken;
+    }
+    $secToken = generate_and_save_sec_token($userUid, $userId);
+    if ($secToken !== null) {
+        $resp['secToken'] = $secToken;
     }
     return $resp;
 }
