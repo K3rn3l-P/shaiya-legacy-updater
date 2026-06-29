@@ -344,6 +344,32 @@ function generate_and_save_sec_token($userUid, $userId) {
     return $token;
 }
 
+// ---------------------------------------------------------------------------
+// launchToken single-use, user-bound (0xA101). Sostituisce get_launch_token()
+// (HMAC globale-per-finestra). Nonce uint32 in dbo.GameLaunchNonces, consumato
+// da sdev-login (UPDATE Used=1). Scadenza 5 min. Un nonce per UserUID.
+// ---------------------------------------------------------------------------
+function generate_and_save_launch_nonce($userUid) {
+    if (!table_exists('dbo.GameLaunchNonces')) return null;
+    $nonce = random_int(1, 4294967295); // uint32 non-zero
+
+    db_query("DELETE FROM dbo.GameLaunchNonces WHERE UserUID = ?", [(int)$userUid]);
+    db_query(
+        "INSERT INTO dbo.GameLaunchNonces (UserUID, Nonce, ExpiresAt, Used)
+         VALUES (?, ?, DATEADD(MINUTE, 5, SYSUTCDATETIME()), 0)",
+        [(int)$userUid, $nonce]
+    );
+
+    // Pulizia periodica nonce scaduti (1% delle chiamate, non blocca)
+    if (random_int(0, 99) === 0) {
+        @db_query("DELETE FROM dbo.GameLaunchNonces WHERE ExpiresAt <= SYSUTCDATETIME()", []);
+    }
+
+    // Stesso formato del vecchio token: dechex(uint32) padded a 8 hex.
+    // Client/sdev-login trattano il valore uint32 in modo identico a prima.
+    return str_pad(dechex($nonce), 8, '0', STR_PAD_LEFT);
+}
+
 function sign_hwid_for_response(string $deviceId): ?string {
     global $config;
     $key = isset($config['hwid_sig_key']) ? (string)$config['hwid_sig_key'] : '';

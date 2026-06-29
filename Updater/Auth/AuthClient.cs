@@ -27,6 +27,18 @@ namespace Shaiya_Duff_Updater
             });
         }
 
+        // Provisioning per-lancio: riemette launchToken + sahKey freschi usando il
+        // secToken di sessione (24h). Chiamato prima di OGNI avvio di game.exe, cosi
+        // i rilanci non dipendono piu da credenziali one-shot consumate al primo avvio.
+        public static LaunchProvisionResponse LaunchProvision(string secToken)
+        {
+            string url = AppConfig.CombineUrl(AppConfig.BaseUrl, "api/auth/launch-provision.php");
+            return JsonHttpClient.Post<LaunchProvisionResponse>(url, new
+            {
+                secToken = secToken
+            });
+        }
+
         public static List<string> ReadSavedAccounts()
         {
             List<string> local = LocalAccountStore.Load();

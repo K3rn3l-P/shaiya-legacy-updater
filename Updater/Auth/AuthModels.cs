@@ -27,6 +27,16 @@ namespace Shaiya_Duff_Updater
         public string hwidSig { get; set; }
     }
 
+    // Risposta di api/auth/launch-provision.php — credenziali effimere riemesse
+    // ad ogni avvio (Start Game) autenticando con il secToken di sessione.
+    public class LaunchProvisionResponse
+    {
+        public bool ok { get; set; }
+        public string message { get; set; }
+        public string launchToken { get; set; }
+        public string sahKey { get; set; }
+    }
+
     public class SavedAccountsResponse
     {
         public bool ok { get; set; }
