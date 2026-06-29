@@ -24,7 +24,17 @@
         public const int LoginVTable = 0x0074FFC0;
         public const int PatchLoginFlow1 = 0x004D4EBF;
         public const int PatchLoginFlow2 = 0x004D1F5F;
+        // DEPRECATO: PatchLoginFlow3 (JMP 0x4D0DCD->0x4D0EF3) causava crash random a 0x4D0EF9
+        // (ACCESS_VIOLATION): saltava MOV EAX,EDI@0x4D0EF1 lasciando EAX garbage -> scrittura OOB.
+        // Sostituito dal data-write LoginSkipDisplayFlag (vedi sotto). Non piu' applicato.
         public const int PatchLoginFlow3 = 0x004D0DCD;
+
+        // FIX: invece di patchare il codice, si scrive obj+0x714 = 2 ("rete connessa"): il
+        // gioco salta da solo il blocco display/overwrite-username con i suoi salti nativi
+        // (0x4D0DCD JNZ -> 0x4D0E83 CMP 1 JNZ -> 0x4D0FE3), pulito e senza registri stale.
+        // obj = *(LoginPointer). Verificato su game.exe (Ghidra, 2026-06-26).
+        public const int LoginSkipDisplayFlagOffset = 0x714;
+        public const byte LoginSkipDisplayFlagValue = 0x02;
 
         public static readonly byte[] PatchLoginFlow1Bytes =
         {

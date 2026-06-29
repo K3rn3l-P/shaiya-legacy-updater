@@ -66,6 +66,13 @@ namespace Shaiya_Duff_Updater
         public static int LoginFlowPatchRestoreDelayMs = 2000;
         public static int AutoSelectRetryDelayMs = 1500;
 
+        // Auto-login IN-PROCESS (sdev-client). true => l'updater NON inietta piu
+        // credenziali/patch via WriteProcessMemory: passa user/pw via env
+        // SDEV_LOGIN_USER/PW e sdev-client.dll esegue il login dall'interno (no race
+        // col DoLogin per-frame). Default false = injection esterna classica.
+        // Attivare SOLO con una sdev-client.dll che supporta l'auto-login in-process.
+        public static bool InProcessAutoLogin = false;
+
         // Keeps the real game window out of sight while the launcher loading panel is shown.
         // Default mode is Offscreen because fully hiding/minimizing some D3D clients can break device init.
         public static bool HideGameWindowUntilReady = true;
@@ -136,6 +143,7 @@ namespace Shaiya_Duff_Updater
                 LoginOverlayFallbackRevealDelayMs = Math.Max(0, ini.GetInt("Game", "LoginOverlayFallbackRevealDelayMs", LoginOverlayFallbackRevealDelayMs));
                 LoginFlowPatchRestoreDelayMs = Math.Max(0, ini.GetInt("Game", "LoginFlowPatchRestoreDelayMs", LoginFlowPatchRestoreDelayMs));
                 AutoSelectRetryDelayMs = Math.Max(0, ini.GetInt("Game", "AutoSelectRetryDelayMs", AutoSelectRetryDelayMs));
+                InProcessAutoLogin = ini.GetBool("Game", "InProcessAutoLogin", InProcessAutoLogin);
                 HideGameWindowUntilReady = ini.GetBool("Game", "HideGameWindowUntilReady", HideGameWindowUntilReady);
                 GameWindowHideMode = ini.Get("Game", "GameWindowHideMode", GameWindowHideMode);
                 GameWindowHideWaitMs = Math.Max(0, ini.GetInt("Game", "GameWindowHideWaitMs", GameWindowHideWaitMs));

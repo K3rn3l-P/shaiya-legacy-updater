@@ -687,6 +687,40 @@ namespace Shaiya_Duff_Updater
                 AppLogger.Debug("launch", "LaunchGameWorker start. gamePath=" + gamePath);
                 SetGameLaunchStatus("Starting game...", AppConfig.LoginOverlaySubText);
 
+                // Re-provision per-lancio: riemette launchToken + sahKey freschi usando il
+                // secToken di sessione. Risolve la fragilita delle credenziali one-shot — i
+                // rilanci non dipendono piu da token consumati al primo avvio. Fail-closed:
+                // sessione assente/scaduta -> richiede re-login, nessun lancio con env vuote.
+                if (string.IsNullOrWhiteSpace(MW.SecToken))
+                {
+                    AppLogger.Warn("Launch aborted: no active session token. Re-login required.");
+                    SetGameLaunchStatus("Re-login required", "Please log in again to play.");
+                    success = false;
+                    return;
+                }
+                try
+                {
+                    LaunchProvisionResponse prov = AuthClient.LaunchProvision(MW.SecToken);
+                    if (prov == null || !prov.ok)
+                    {
+                        AppLogger.Warn("Launch provision rejected (session expired or account blocked). Re-login required.");
+                        MW.SecToken = null;
+                        SetGameLaunchStatus("Re-login required", "Your session expired. Please log in again.");
+                        success = false;
+                        return;
+                    }
+                    MW.LaunchToken = prov.launchToken;
+                    MW.SahKeyHex = prov.sahKey;
+                    AppLogger.Debug("launch", "Launch provision OK (fresh launchToken + sahKey).");
+                }
+                catch (Exception provEx)
+                {
+                    AppLogger.Warn("Launch provision failed (login server unreachable): " + provEx.Message);
+                    SetGameLaunchStatus("Login server unavailable", "Could not reach the login server. Please try again.");
+                    success = false;
+                    return;
+                }
+
                 // data.sah stays encrypted (ESAH) — sdev-client.dll decrypts at runtime via SDEV_SAH_KEY.
                 // EnsureDataSahReadyForLaunch() is intentionally skipped.
 
@@ -717,6 +751,16 @@ namespace Shaiya_Duff_Updater
                 if (!string.IsNullOrWhiteSpace(MW.SecToken))
                     psi.EnvironmentVariables["SDEV_SEC_TOKEN"] = MW.SecToken;
 
+                // Auto-login in-process: credenziali via env (lette+azzerate da sdev-client).
+                // Innocue per il client classico. Usate solo con InProcessAutoLogin attivo.
+                if (AppConfig.InProcessAutoLogin)
+                {
+                    if (!string.IsNullOrEmpty(MW.UserID))
+                        psi.EnvironmentVariables["SDEV_LOGIN_USER"] = MW.UserID;
+                    if (!string.IsNullOrEmpty(MW.TempPw))
+                        psi.EnvironmentVariables["SDEV_LOGIN_PW"] = MW.TempPw;
+                }
+
                 if (!VerifyClientDllIntegrity(AppPaths.BaseDirectory))
                     throw new InvalidOperationException("Client integrity check failed. Please use Repair to restore the client files.");
 
@@ -728,7 +772,15 @@ namespace Shaiya_Duff_Updater
                 AppLogger.Debug("launch", "Game process started. pid=" + processId);
                 gameWindow = GameWindowController.HideUntilReady(processId);
                 try { TryInjectCredentials(processId, out success); }
-                finally { MW.TempPw = null; MW.LaunchToken = null; MW.SahKeyHex = null; MW.SecToken = null; }
+                finally
+                {
+                    // Azzera solo le credenziali effimere RI-PROVISIONATE ad ogni lancio.
+                    // Sessione (SecToken) + UserID/TempPw restano in memoria per i rilanci
+                    // senza re-login (il server non puo riemettere la password plaintext).
+                    // Tutto viene comunque azzerato all'uscita/logout dell'updater.
+                    MW.LaunchToken = null;
+                    MW.SahKeyHex = null;
+                }
             }
             catch (Exception ex)
             {
@@ -940,7 +992,10 @@ namespace Shaiya_Duff_Updater
             AppLogger.Debug("launch", "Login socket (diagnostic). value=0x" + loginSocket.ToString("X8") + " ready=" + (loginSocket != 0 ? "1" : "0"));
 
             SetGameLaunchStatus("Logging in...", "Connecting with your account.");
-            InjectCredentials(processId, pointer, out loginFlowBackup, out loginFlowPatched);
+            // Auto-login in-process: sdev-client esegue user/pw+patch dall'interno (no race).
+            // L'updater non inietta nulla; attende solo che il login raggiunga il server-select.
+            if (!AppConfig.InProcessAutoLogin)
+                InjectCredentials(processId, pointer, out loginFlowBackup, out loginFlowPatched);
             AppLogger.Debug("launch", "Credentials injected. Waiting for login to reach server selection.");
 
             // Authoritative login gate: do NOT advance to server selection until the login server has
@@ -966,7 +1021,7 @@ namespace Shaiya_Duff_Updater
                     // Only re-inject while still on the login screen; if the screen already moved on we
                     // must not clobber a different object that now lives at the same pointer. When the
                     // vtable was never validated (different build, fallback path), skip the guard.
-                    if (!loginScreenReady || IsLoginScreenObject(processId, pointer))
+                    if (!AppConfig.InProcessAutoLogin && (!loginScreenReady || IsLoginScreenObject(processId, pointer)))
                     {
                         ReinjectCredentialsAndPatches(processId, pointer);
                         loginFlowPatched = true;
@@ -991,6 +1046,10 @@ namespace Shaiya_Duff_Updater
                 AppLogger.Debug("launch", "Branch=LoginFailed reason=" + loginReason);
                 TryRestoreLoginFlowPatches(processId, loginFlowBackup, loginFlowPatched, "login-not-confirmed");
                 loginFlowPatched = false;
+                // Il fix anti-crash aveva messo obj+0x714=2 (skip display) per l'auto-login, che
+                // pero' disabilita i campi del login MANUALE. Sul fallback manuale lo rimettiamo a 0
+                // (stato display iniziale) cosi' il gioco ri-abilita input username/password.
+                ResetLoginDisplayFlag(processId, pointer);
                 SetGameLaunchStatus("Login failed", "Could not log in. Please check your credentials and try again.");
                 success = false;
                 return;
@@ -1010,7 +1069,7 @@ namespace Shaiya_Duff_Updater
                     // transient object-scan miss. Re-inject and try once more.
                     int retryDelay = Math.Max(0, AppConfig.AutoSelectRetryDelayMs);
                     if (retryDelay > 0) Thread.Sleep(retryDelay);
-                    if (!loginScreenReady || IsLoginScreenObject(processId, pointer)) ReinjectCredentialsAndPatches(processId, pointer);
+                    if (!AppConfig.InProcessAutoLogin && (!loginScreenReady || IsLoginScreenObject(processId, pointer))) ReinjectCredentialsAndPatches(processId, pointer);
                     autoSelected = GameServerSelectAutomation.AutoSelectFirstServer(processId);
                     AppLogger.Debug("launch", "Auto-select retry result=" + (autoSelected ? "1" : "0"));
                 }
@@ -1074,9 +1133,14 @@ namespace Shaiya_Duff_Updater
             MemoryManager.WriteFixedAscii(processId, pointer + GameOffsets.TempPasswordOffsetFromPointer, MW.TempPw, GameOffsets.TempPasswordBufferLength);
             MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow1, GameOffsets.PatchLoginFlow1Bytes);
             MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow2, GameOffsets.PatchLoginFlow2Bytes);
-            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow3, GameOffsets.PatchLoginFlow3Bytes);
+            // FIX crash 0x4D0EF9: il vecchio PatchLoginFlow3 (JMP 0x4D0DCD->0x4D0EF3) saltava
+            // MOV EAX,EDI lasciando EAX garbage -> scrittura OOB intermittente. Sostituito da
+            // un data-write: obj+0x714 = 2 fa saltare il blocco display/overwrite-username con
+            // i salti NATIVI del gioco (0x4D0DCD JNZ -> 0x4D0E83 CMP1 JNZ -> 0x4D0FE3), pulito.
+            MemoryManager.WriteMemory(processId, pointer + GameOffsets.LoginSkipDisplayFlagOffset,
+                new byte[] { GameOffsets.LoginSkipDisplayFlagValue });
             loginFlowPatched = true;
-            AppLogger.Debug("launch", "Login flow patch bytes written.");
+            AppLogger.Debug("launch", "Login flow injected (patch1+2 + skip-display flag 0x714=2).");
         }
 
         private static void ReinjectCredentialsAndPatches(int processId, int pointer)
@@ -1085,7 +1149,30 @@ namespace Shaiya_Duff_Updater
             MemoryManager.WriteFixedAscii(processId, pointer + GameOffsets.TempPasswordOffsetFromPointer, MW.TempPw, GameOffsets.TempPasswordBufferLength);
             MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow1, GameOffsets.PatchLoginFlow1Bytes);
             MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow2, GameOffsets.PatchLoginFlow2Bytes);
-            MemoryManager.WriteMemory(processId, GameOffsets.PatchLoginFlow3, GameOffsets.PatchLoginFlow3Bytes);
+            // Vedi InjectCredentials: data-write 0x714=2 al posto del PatchLoginFlow3 buggato.
+            MemoryManager.WriteMemory(processId, pointer + GameOffsets.LoginSkipDisplayFlagOffset,
+                new byte[] { GameOffsets.LoginSkipDisplayFlagValue });
+        }
+
+        // Sul fallback manuale: riporta obj+0x714 a 0 (stato display iniziale) per riabilitare
+        // i campi username/password del login manuale, che il fix auto-login (0x714=2) aveva
+        // disattivato saltando il blocco display.
+        private static void ResetLoginDisplayFlag(int processId, int pointer)
+        {
+            try
+            {
+                int obj = BitConverter.ToInt32(MemoryManager.ReadMemory(processId, GameOffsets.LoginPointer, 4), 0);
+                if (obj == 0) obj = pointer;
+                if (obj != 0 && IsLoginScreenObject(processId, obj))
+                {
+                    MemoryManager.WriteMemory(processId, obj + GameOffsets.LoginSkipDisplayFlagOffset, new byte[] { 0x00 });
+                    AppLogger.Debug("launch", "Login display flag reset (0x714=0) for manual login.");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("ResetLoginDisplayFlag failed: " + ex.Message);
+            }
         }
 
         // True when the active screen object at LoginPointer is the CLogin screen (vtable check).
