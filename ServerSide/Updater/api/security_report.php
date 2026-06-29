@@ -143,8 +143,9 @@ if (!$logOnly && $flags !== 0) {
     }
 
     if ($doKick) {
+        // Canale comandi sicuro: PSM_Cmd.usp_RunCommand (account Ernoweb@, tier PLAYER -> /kickuid ok).
         @db_query(
-            "EXEC [PS_GameDefs].[dbo].[Command] @serviceName=N'ps_game', @cmmd=?",
+            "EXEC [PSM_Cmd].[dbo].[usp_RunCommand] @service=N'ps_game', @command=?",
             ['/kickuid ' . $userUID]
         );
 
