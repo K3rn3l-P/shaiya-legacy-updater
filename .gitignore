@@ -64,3 +64,8 @@ ServerSide/2.ShaiyaServer/
 ServerSide/Updater/api/config.php
 ServerSide/Updater/api/config.local.php
 ServerSide/Updater/api/config.dev.php
+
+# ── Syncthing (il repo è in una share sync) ───────────
+*.sync-conflict-*
+.stfolder
+.stversions
