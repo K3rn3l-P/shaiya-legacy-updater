@@ -52,11 +52,15 @@ namespace Shaiya_Duff_Updater
 
     // Response of api/status.php. The fact the call succeeds at all proves the website/API is up;
     // "server" reflects whether the login server (ps_login) TCP port is reachable.
+    // "maintenance" reflects PS_UserData.dbo.MaintenanceMode (set from ShaiyaServerHub's
+    // "Manutenzione" card): server-side gate already blocks normal-player login when true — this
+    // flag is purely informational, to show a banner instead of disabling anything client-side.
     public class StatusResponse
     {
         public bool ok { get; set; }
         public bool web { get; set; }
         public bool server { get; set; }
+        public bool maintenance { get; set; }
         public long ts { get; set; }
     }
 

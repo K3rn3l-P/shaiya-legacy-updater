@@ -179,7 +179,7 @@
           <TextBlock Text="Web" Margin="6,0,12,0" Foreground="#C8B890" VerticalAlignment="Center"
                      FontFamily="pack://application:,,,/resources/fonts/#Inter" FontSize="11"/>
           <Ellipse x:Name="DotServer" Width="8" Height="8" Fill="#7B7B7B" VerticalAlignment="Center"/>
-          <TextBlock Text="Server" Margin="6,0,0,0" Foreground="#C8B890" VerticalAlignment="Center"
+          <TextBlock x:Name="TextServerLabel" Text="Server" Margin="6,0,0,0" Foreground="#C8B890" VerticalAlignment="Center"
                      FontFamily="pack://application:,,,/resources/fonts/#Inter" FontSize="11"/>
         </StackPanel>
       </Border>

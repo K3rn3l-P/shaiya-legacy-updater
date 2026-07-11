@@ -9,9 +9,10 @@ namespace Shaiya_Duff_Updater
     {
         public struct Status
         {
-            public bool Reachable; // api/status.php answered (website/API up)
-            public bool Web;       // website online (true when Reachable)
-            public bool Server;    // login server reachable (only meaningful when Reachable)
+            public bool Reachable;    // api/status.php answered (website/API up)
+            public bool Web;          // website online (true when Reachable)
+            public bool Server;       // login server reachable (only meaningful when Reachable)
+            public bool Maintenance;  // PS_UserData.dbo.MaintenanceMode active (only meaningful when Reachable)
         }
 
         public static Status Get()
@@ -21,14 +22,14 @@ namespace Shaiya_Duff_Updater
                 string url = AppConfig.CombineUrl(AppConfig.BaseUrl, "api/status.php");
                 StatusResponse r = JsonHttpClient.Get<StatusResponse>(url);
                 if (r == null)
-                    return new Status { Reachable = false, Web = false, Server = false };
+                    return new Status { Reachable = false, Web = false, Server = false, Maintenance = false };
 
-                return new Status { Reachable = true, Web = true, Server = r.server };
+                return new Status { Reachable = true, Web = true, Server = r.server, Maintenance = r.maintenance };
             }
             catch (Exception ex)
             {
                 AppLogger.Debug("status", "Status probe failed: " + ex.Message);
-                return new Status { Reachable = false, Web = false, Server = false };
+                return new Status { Reachable = false, Web = false, Server = false, Maintenance = false };
             }
         }
     }

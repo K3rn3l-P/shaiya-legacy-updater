@@ -14,13 +14,23 @@ $cacheTtl = isset($statusCfg['cache_ttl']) ? (int)$statusCfg['cache_ttl']   : 10
 
 // Cache the probe result so a flood of requests cannot turn each call into a blocking
 // fsockopen (up to $timeout seconds when the server is down) — DoS amplification guard.
-// Shared with modules/stats_logic.php (same temp file).
+// Shared with modules/stats_logic.php (same temp file). That script (which HAS database access)
+// also writes a "maintenance" flag into this same cache (PS_UserData.dbo.MaintenanceMode, set by
+// ShaiyaServerHub's "Manutenzione" card) — read it here too, still with NO database access of our
+// own: if this endpoint ends up being the one to refresh the cache (stale/missing), carry the last
+// known maintenance value forward rather than dropping it to false.
 $cacheFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'shaiya_srv_status.json';
 $serverUp = null;
+$maintenance = false;
 if (is_file($cacheFile)) {
     $c = json_decode(@file_get_contents($cacheFile), true);
-    if (is_array($c) && isset($c['ts'], $c['up']) && (time() - (int)$c['ts']) < $cacheTtl) {
-        $serverUp = (bool)$c['up'];
+    if (is_array($c)) {
+        if (isset($c['maintenance'])) {
+            $maintenance = (bool)$c['maintenance'];
+        }
+        if (isset($c['ts'], $c['up']) && (time() - (int)$c['ts']) < $cacheTtl) {
+            $serverUp = (bool)$c['up'];
+        }
     }
 }
 
@@ -33,12 +43,13 @@ if ($serverUp === null) {
         $serverUp = true;
         @fclose($fp);
     }
-    @file_put_contents($cacheFile, json_encode(['ts' => time(), 'up' => $serverUp]));
+    @file_put_contents($cacheFile, json_encode(['ts' => time(), 'up' => $serverUp, 'maintenance' => $maintenance]));
 }
 
 respond([
-    'ok'     => true,
-    'web'    => true,
-    'server' => $serverUp,
-    'ts'     => time(),
+    'ok'          => true,
+    'web'         => true,
+    'server'      => $serverUp,
+    'maintenance' => $maintenance,
+    'ts'          => time(),
 ]);

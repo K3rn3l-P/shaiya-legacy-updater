@@ -92,19 +92,34 @@ namespace Shaiya_Duff_Updater
             Brush green = (Brush)new BrushConverter().ConvertFrom("#5BD17B");
             Brush red = (Brush)new BrushConverter().ConvertFrom("#E0574B");
             Brush grey = (Brush)new BrushConverter().ConvertFrom("#7B7B7B");
+            Brush amber = (Brush)new BrushConverter().ConvertFrom("#E8C881");
 
             if (!st.Reachable)
             {
                 DotWeb.Fill = red;
                 DotServer.Fill = grey;
+                TextServerLabel.Text = "Server";
                 StatusPill.ToolTip = "Website unreachable · server status unknown";
                 _serverKnownOffline = false; // fail-open
             }
             else
             {
                 DotWeb.Fill = green;
-                DotServer.Fill = st.Server ? green : red;
-                StatusPill.ToolTip = "Web online · Login server " + (st.Server ? "online" : "offline");
+                if (st.Maintenance)
+                {
+                    // Server dot/label replaced by "Maintenance" (same slot) — purely informational,
+                    // the actual login gate is enforced server-side (PS_UserData.dbo.MaintenanceMode).
+                    // Does NOT disable Start: staff accounts can still log in during maintenance.
+                    DotServer.Fill = amber;
+                    TextServerLabel.Text = "Maintenance";
+                    StatusPill.ToolTip = "Web online · Server under maintenance (staff-only login)";
+                }
+                else
+                {
+                    DotServer.Fill = st.Server ? green : red;
+                    TextServerLabel.Text = "Server";
+                    StatusPill.ToolTip = "Web online · Login server " + (st.Server ? "online" : "offline");
+                }
                 _serverKnownOffline = !st.Server;
             }
 
