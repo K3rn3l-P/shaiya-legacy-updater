@@ -1,3 +1,7 @@
+# Legacy Shaiya Updater Fork
+
+This repository is a fork of [Legacy Shaiya Updater](https://github.com/elessarshaiya/shaiya-legacy-updater).
+
 # Legacy Shaiya Updater with Modern Core
 
 This repository contains a legacy-style Shaiya launcher UI with a modernized login, update, patch, repair, and SAH/ESAH handling core.
